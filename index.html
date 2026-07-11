@@ -97,7 +97,6 @@ const dientesLecheInf=['85','84','83','82','81','71','72','73','74','75'];
 const fmt=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:0}).format(n||0);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const hoy=()=>new Date().toISOString().split('T')[0];
-
 async function doLogin(){
   const user=document.getElementById('user').value.toLowerCase();
   const pwd=document.getElementById('pwd').value;
@@ -113,7 +112,6 @@ async function doLogin(){
     setInterval(cargarDeSupabase,2500);
   } else alert('USUARIO O CONTRASEÑA INCORRECTOS');
 }
-
 async function cargarDeSupabase(){
   try{
     const {data}=await supabaseClient.from('dental').select('datos').eq('user_id',userId).maybeSingle();
@@ -128,13 +126,11 @@ async function cargarDeSupabase(){
     }
   }catch(e){console.log('Primer acceso o error de carga',e)}
 }
-
 async function guardar(){
   try{
     await supabaseClient.from('dental').upsert({user_id:userId,datos:datos},{onConflict:'user_id'});
   }catch(e){console.error('Error guardando:',e)}
 }
-
 function renderTabs(){
   let html='';
   const filtradas=rolActual==='admin'?entidades:entidades.filter(e=>e.id!=='dashboard');
@@ -142,7 +138,6 @@ function renderTabs(){
   html+=`<button class="tab-btn" style="margin-left:auto" onclick="doLogout()">Salir</button>`;
   document.getElementById('tabs').innerHTML=html;
 }
-
 function doLogout(){
   usuarioActual=null;rolActual=null;datos={pacientes:[],citas:[],finanzas:{ingresos:[],egresos:[]},historias:[],recetas:[]};
   document.getElementById('login').style.display='flex';
@@ -150,7 +145,6 @@ function doLogout(){
   document.getElementById('user').value='';
   document.getElementById('pwd').value='';
 }
-
 function mostrarPestana(id){
   pestana=id;renderTabs();renderCurrent();
 }
@@ -162,9 +156,7 @@ function renderCurrent(){
   else if(pestana==='historias')historias();
   else if(pestana==='recetario')recetario();
 }
-
 function nombrePaciente(id){const p=datos.pacientes.find(x=>x.id===id);return p?p.nombre:'—'}
-
 function dashboard(){
   const citasHoy=datos.citas.filter(c=>c.fecha===hoy()).sort((a,b)=>a.hora.localeCompare(b.hora));
   const mesActual=new Date().toISOString().slice(0,7);
@@ -185,7 +177,6 @@ function dashboard(){
   });
   document.getElementById('content').innerHTML=html;
 }
-
 function pacientes(){
   let html='<h2>Pacientes</h2><div class="table-wrapper"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Edad</th><th>Tratamiento</th><th>Alergias</th><th></th></tr></thead><tbody>';
   datos.pacientes.forEach((p,i)=>{
@@ -195,7 +186,6 @@ function pacientes(){
   html+=`<button class="btn-add" onclick="datos.pacientes.push({id:uid(),nombre:'',telefono:'',edad:'',tipo:'GENERAL',alergias:'',notas:'',fecha:hoy()});guardar();pacientes()">+ Agregar paciente</button>`;
   document.getElementById('content').innerHTML=html;
 }
-
 function agenda(){
   if(!fechaAgenda)fechaAgenda=hoy();
   let html='<h2>Agenda de citas</h2>';
@@ -228,7 +218,6 @@ function agregarCita(){
   datos.citas.push({id:uid(),pacienteId,tipo:document.getElementById('nc-tipo').value,fecha:document.getElementById('nc-fecha').value,hora:document.getElementById('nc-hora').value,notas:document.getElementById('nc-notas').value,estado:'PENDIENTE'});
   guardar();agenda();
 }
-
 function finanzas(){
   const totalI=datos.finanzas.ingresos.reduce((s,i)=>s+(i.monto||0),0);
   const totalE=datos.finanzas.egresos.reduce((s,e)=>s+(e.monto||0),0);
@@ -281,7 +270,6 @@ function agregarEgreso(){
   datos.finanzas.egresos.push({id:uid(),categoria:document.getElementById('ne-cat').value,monto,fecha:document.getElementById('ne-fecha').value,desc:document.getElementById('ne-desc').value});
   guardar();finanzas();
 }
-
 function obtenerHistoria(pacienteId){
   let h=datos.historias.find(x=>x.pacienteId===pacienteId);
   if(!h){
@@ -291,7 +279,6 @@ function obtenerHistoria(pacienteId){
   }
   return h;
 }
-
 function renderDientes(lista,odontograma){
   let html='<div class="odonto-quad">';
   lista.forEach(n=>{
@@ -301,7 +288,6 @@ function renderDientes(lista,odontograma){
   html+='</div>';
   return html;
 }
-
 function toggleDiente(numero){
   const hi=datos.historias.findIndex(x=>x.pacienteId===historiaSeleccionada);
   if(hi<0)return;
@@ -310,7 +296,6 @@ function toggleDiente(numero){
   od[numero]=cur==='sano'?'tratado':(cur==='tratado'?'extraido':'sano');
   guardar();historias();
 }
-
 function historias(){
   let html='<h2>Historias clínicas</h2>';
   html+='<div class="patient-picker"><select id="hc-pac" onchange="historiaSeleccionada=this.value;historias()">';
@@ -329,21 +314,18 @@ function historias(){
   html+=`<div><label>Nombre</label><input value="${paciente?paciente.nombre:''}" disabled></div>`;
   html+=`<div><label>Edad</label><input value="${paciente?paciente.edad:''}" disabled></div>`;
   html+=`<div><label>Teléfono</label><input value="${paciente?paciente.telefono:''}" disabled></div>`;
-  html+=`<div><label>Alérgico a</label><input value="${h.alergicoA}" onchange="datos.historias[${hi}].alergicoA=this.value;guardar()"></div>`;
-  html+=`<div class="full"><label>Dirección</label><input value="${h.direccion}" onchange="datos.historias[${hi}].direccion=this.value;guardar()"></div>`;
-  html+=`<div class="full"><label>Enfermedad o padecimiento crónico</label><input value="${h.enfermedadCronica}" onchange="datos.historias[${hi}].enfermedadCronica=this.value;guardar()"></div>`;
+  html+=`<div><label>Alérgico a</label><input value="${h.alergicoA}" oninput="datos.historias[${hi}].alergicoA=this.value;guardar()"></div>`;
+  html+=`<div class="full"><label>Dirección</label><input value="${h.direccion}" oninput="datos.historias[${hi}].direccion=this.value;guardar()"></div>`;
+  html+=`<div class="full"><label>Enfermedad o padecimiento crónico</label><input value="${h.enfermedadCronica}" oninput="datos.historias[${hi}].enfermedadCronica=this.value;guardar()"></div>`;
   html+='</div></div>';
-
   html+='<h3>Diagnóstico y plan de tratamiento</h3><div class="table-wrapper"><table><thead><tr><th>Descripción</th><th>Costo</th><th></th></tr></thead><tbody>';
   h.diagnosticos.forEach((d,i)=>{
     html+=`<tr><td><input type="text" value="${d.descripcion}" oninput="datos.historias[${hi}].diagnosticos[${i}].descripcion=this.value;guardar()"></td><td><input type="number" value="${d.costo}" style="width:80px" oninput="datos.historias[${hi}].diagnosticos[${i}].costo=parseFloat(this.value||0);guardar()"></td><td><button class="btn-delete" onclick="datos.historias[${hi}].diagnosticos.splice(${i},1);guardar();historias()">✕</button></td></tr>`;
   });
   html+='</tbody></table></div>';
   html+=`<button class="btn-add" onclick="datos.historias[${hi}].diagnosticos.push({descripcion:'',costo:0});guardar();historias()">+ Agregar diagnóstico</button>`;
-
   html+='<h3>Observaciones</h3>';
-  html+=`<textarea onchange="datos.historias[${hi}].observaciones=this.value;guardar()">${h.observaciones}</textarea>`;
-
+  html+=`<textarea oninput="datos.historias[${hi}].observaciones=this.value;guardar()">${h.observaciones}</textarea>`;
   html+='<h3>Tratamientos por realizar</h3><div class="table-wrapper"><table><thead><tr><th>Fecha</th><th>Tx por realizar</th><th>Costo</th><th>Abono</th><th>Saldo</th><th></th></tr></thead><tbody>';
   h.tratamientos.forEach((t,i)=>{
     const saldo=(t.costo||0)-(t.abono||0);
@@ -351,7 +333,6 @@ function historias(){
   });
   html+='</tbody></table></div>';
   html+=`<button class="btn-add" onclick="datos.historias[${hi}].tratamientos.push({fecha:hoy(),tx:'',costo:0,abono:0});guardar();historias()">+ Agregar tratamiento</button>`;
-
   html+='<h3>Odontograma</h3><div class="odonto-block">';
   html+='<div class="odonto-row">'+renderDientes(dientesPermanentesSup.slice(0,8),h.odontograma)+renderDientes(dientesPermanentesSup.slice(8),h.odontograma)+'</div>';
   html+='<div class="odonto-row">'+renderDientes(dientesLecheSup.slice(0,5),h.odontograma)+renderDientes(dientesLecheSup.slice(5),h.odontograma)+'</div>';
@@ -360,14 +341,11 @@ function historias(){
   html+='<div class="odonto-row">'+renderDientes(dientesPermanentesInf.slice(0,8),h.odontograma)+renderDientes(dientesPermanentesInf.slice(8),h.odontograma)+'</div>';
   html+='<div class="legend"><span><i style="background:#FFFFFF"></i> Sano</span><span><i class="tratado" style="background:#FFD9B8"></i> Tratado</span><span><i style="background:#FFC9C9"></i> Extraído</span></div>';
   html+='</div>';
-
   document.getElementById('content').innerHTML=html;
 }
-
 function logoSvgGrande(){
   return '<svg width="70" height="70" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#75D0E1" stroke-width="5"/><circle cx="50" cy="50" r="32" fill="none" stroke="#75D0E1" stroke-width="2.5"/><path d="M 30 55 Q 50 70 70 55" fill="none" stroke="#75D0E1" stroke-width="4" stroke-linecap="round"/><g transform="translate(68, 32)"><rect x="0" y="2" width="3" height="14" fill="#75D0E1"/><rect x="5" y="2" width="3" height="14" fill="#75D0E1"/><rect x="10" y="2" width="3" height="14" fill="#75D0E1"/><rect x="0" y="0" width="13" height="3" fill="#75D0E1"/></g></svg>';
 }
-
 function recetario(){
   let html='<h2>Recetario</h2>';
   html+='<div class="card"><h3 style="margin-top:0">Nueva receta</h3><div class="form-grid">';
@@ -375,7 +353,6 @@ function recetario(){
   html+=`<div><label>Fecha</label><input type="date" id="rc-fecha" value="${hoy()}"></div>`;
   html+=`<div class="full"><label>Px (medicamentos e indicaciones)</label><textarea id="rc-contenido" placeholder="Ej. Amoxicilina 500mg, tomar 1 cápsula cada 8 horas por 7 días"></textarea></div>`;
   html+='</div><button class="btn-add" onclick="agregarReceta()">+ Guardar receta</button></div>';
-
   html+='<h3>Recetas guardadas</h3>';
   const recetasOrdenadas=[...datos.recetas].sort((a,b)=>b.fecha.localeCompare(a.fecha));
   if(recetasOrdenadas.length===0)html+='<div class="card">Aún no hay recetas guardadas.</div>';
@@ -385,7 +362,6 @@ function recetario(){
   });
   document.getElementById('content').innerHTML=html;
 }
-
 function agregarReceta(){
   const pacienteId=document.getElementById('rc-pac').value;
   if(!pacienteId){alert('Primero agrega un paciente en la pestaña Pacientes');return}
@@ -394,7 +370,6 @@ function agregarReceta(){
   datos.recetas.push({id:uid(),pacienteId,fecha:document.getElementById('rc-fecha').value,contenido});
   guardar();recetario();
 }
-
 function imprimirReceta(id){
   const r=datos.recetas.find(x=>x.id===id);
   if(!r)return;
@@ -425,7 +400,6 @@ function imprimirReceta(id){
   </body></html>`);
   win.document.close();
 }
-
 document.getElementById('login').style.display='flex';
 </script>
 </body>
