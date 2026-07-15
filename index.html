@@ -87,6 +87,8 @@ const st=sessionStorage.getItem('googleToken');if(st){googleAccessToken=st;sessi
 
 <div id="googleModal" class="modal-overlay"><div class="modal"><h3>Conectar con Google Drive</h3><p style="font-size:12px;color:#5A7A82;margin-bottom:16px">Se abrirá una ventana para autorizar acceso a Google Drive y sincronizar historias médicas.</p><button id="googleAuthBtn" class="btn-add" onclick="initGoogleAuth()">Autorizar con Google</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeGoogleModal()">Cancelar</button></div></div>
 
+<div id="importModal" class="modal-overlay"><div class="modal"><h3>📥 Importar Historias Clínicas</h3><p style="font-size:12px;color:#5A7A82;margin-bottom:16px">Importar historias clínicas desde los PDFs de Google Drive. Este proceso puede tardar varios minutos.</p><button class="btn-add" onclick="importarHistoriasDesdeDrive(true)" style="background:#75D0E1">Probar con 5 PDFs</button><button class="btn-add" onclick="importarHistoriasDesdeDrive(false)" style="background:#4A8FA5;margin-top:8px">Importar Todos (1000+)</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeImportModal()">Cancelar</button></div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -443,7 +445,7 @@ let filtroHistorias='';
 
 function historias(){
   let html='<h2>Historias clínicas</h2>';
-  html+=`<div style="margin-bottom:12px;display:flex;gap:8px"><input id="inputBuscadorHistoria" type="text" placeholder="🔍 Buscar paciente..." style="flex:1;padding:12px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px"><button class="btn-secondary" onclick="openGoogleModal()" style="padding:8px 12px;font-size:11px">🔗 Sincronizar</button></div>`;
+  html+=`<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap"><input id="inputBuscadorHistoria" type="text" placeholder="🔍 Buscar paciente..." style="flex:1;min-width:200px;padding:12px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px"><button class="btn-secondary" onclick="openGoogleModal()" style="padding:8px 12px;font-size:11px">🔗 Sincronizar</button><button class="btn-secondary" onclick="openImportModal()" style="padding:8px 12px;font-size:11px">📥 Importar</button></div>`;
   html+=`<div id="listaHistorias"></div>`;
   document.getElementById('content').innerHTML=html;
 
@@ -628,6 +630,13 @@ function closeGoogleModal(){
   document.getElementById('googleModal').classList.remove('active');
 }
 
+function openImportModal(){
+  document.getElementById('importModal').classList.add('active');
+}
+function closeImportModal(){
+  document.getElementById('importModal').classList.remove('active');
+}
+
 function initGoogleAuth(){
   const clientId=GOOGLE_CLIENT_ID;
   const redirectUri='https://legal-create.github.io/punto-dental/callback.html';
@@ -725,6 +734,174 @@ async function extraerTelefonoPDF(nombrePaciente,indexPaciente){
     console.error(e);
     alert('Error al procesar PDF');
   }
+}
+
+async function listarPrimeros5PDFs(){
+  if(!googleAccessToken){alert('Sincroniza con Drive primero');return}
+
+  let pdfs=[];
+  for(const folderId of DRIVE_FOLDER_IDS){
+    try{
+      const url=`https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='application/pdf'&access_token=${googleAccessToken}&fields=files(id,name)&pageSize=100`;
+      const response=await fetch(url);
+      const data=await response.json();
+      if(data.files){
+        pdfs=[...pdfs,...data.files];
+        if(pdfs.length>=5)break;
+      }
+    }catch(e){console.error(e);}
+  }
+
+  alert('Primeros 5 PDFs encontrados:\n\n'+pdfs.slice(0,5).map((p,i)=>`${i+1}. ${p.name}`).join('\n'));
+  return pdfs.slice(0,5);
+}
+
+async function importarHistoriasDesdeDrive(soloLos5Primeros=false){
+  if(!googleAccessToken){alert('Sincroniza con Drive primero');return}
+
+  const msg=soloLos5Primeros?'Importar los PRIMEROS 5 PDFs para revisar':'Importar TODAS las historias clínicas (1000+)';
+  if(!confirm(`⚠️ ${msg}\n¿Continuar? Puede tardar algunos minutos.`)){return}
+
+  let procesados=0;
+  let errores=0;
+  let totalPDFs=0;
+
+  // Mostrar progreso
+  const statusDiv=document.createElement('div');
+  statusDiv.id='importStatusDiv';
+  statusDiv.style.cssText='position:fixed;top:20px;right:20px;background:#75D0E1;color:white;padding:16px;border-radius:8px;z-index:10001;max-width:300px;font-size:12px';
+  statusDiv.innerHTML='<strong>Importando historias...</strong><br>Procesados: 0';
+  document.body.appendChild(statusDiv);
+
+  for(const folderId of DRIVE_FOLDER_IDS){
+    try{
+      let pageToken=null;
+      let hasMore=true;
+
+      while(hasMore){
+        const url=`https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='application/pdf'&access_token=${googleAccessToken}&fields=files(id,name),nextPageToken&pageSize=1000${pageToken?'&pageToken='+pageToken:''}`;
+        const response=await fetch(url);
+        const data=await response.json();
+
+        if(data.files){
+          totalPDFs+=data.files.length;
+          let contados=0;
+
+          for(const file of data.files){
+            if(soloLos5Primeros&&contados>=5)break;
+            contados++;
+            try{
+              const nombrePaciente=file.name.replace('.pdf','').trim();
+              const paciente=datos.pacientes.find(p=>p.nombre.toLowerCase().replace(/\s+/g,' ')===nombrePaciente.toLowerCase().replace(/\s+/g,' '));
+
+              if(!paciente)continue;
+
+              // Descargar y procesar PDF
+              const pdfBuffer=await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${googleAccessToken}`).then(r=>r.arrayBuffer());
+              const doc=await pdfjsLib.getDocument({data:pdfBuffer}).promise;
+
+              let textoCompleto='';
+              for(let i=1;i<=Math.min(doc.numPages,10);i++){
+                const page=await doc.getPage(i);
+                const text=await page.getTextContent();
+                textoCompleto+=text.items.map(it=>it.str).join(' ')+'\n';
+              }
+
+              // Parsear información del texto
+              const datosExtraidos=parsearHistoriaClínica(textoCompleto);
+
+              // Buscar o crear historia
+              let historia=datos.historias.find(h=>h.pacienteId===paciente.id);
+              if(!historia){
+                historia={
+                  pacienteId:paciente.id,
+                  fecha:hoy(),
+                  direccion:datosExtraidos.direccion||'',
+                  alergicoA:datosExtraidos.alergico||'',
+                  enfermedadCronica:datosExtraidos.enfermedad||'',
+                  diagnosticos:datosExtraidos.diagnosticos||[],
+                  observaciones:datosExtraidos.observaciones||'',
+                  tratamientos:datosExtraidos.tratamientos||[],
+                  proximaCita:datosExtraidos.proximaCita||'',
+                  radiografias:[],
+                  odontograma:{}
+                };
+                datos.historias.push(historia);
+              } else {
+                // Actualizar con datos del PDF
+                if(datosExtraidos.diagnosticos.length>0)historia.diagnosticos=datosExtraidos.diagnosticos;
+                if(datosExtraidos.tratamientos.length>0)historia.tratamientos=datosExtraidos.tratamientos;
+                if(datosExtraidos.observaciones)historia.observaciones=datosExtraidos.observaciones;
+                historia.direccion=datosExtraidos.direccion||historia.direccion;
+                historia.alergicoA=datosExtraidos.alergico||historia.alergicoA;
+                historia.enfermedadCronica=datosExtraidos.enfermedad||historia.enfermedadCronica;
+              }
+
+              // Actualizar teléfono del paciente
+              if(datosExtraidos.telefono)paciente.telefono=datosExtraidos.telefono;
+              if(datosExtraidos.edad)paciente.edad=datosExtraidos.edad;
+
+              procesados++;
+              statusDiv.innerHTML=`<strong>Importando...</strong><br>Procesados: ${procesados}/${totalPDFs}<br>Completado: ${Math.round((procesados/totalPDFs)*100)}%`;
+
+            }catch(e){
+              errores++;
+              console.error('Error procesando PDF:',file.name,e);
+            }
+          }
+        }
+
+        pageToken=data.nextPageToken;
+        hasMore=!!pageToken;
+      }
+    }catch(e){
+      console.error('Error folder',folderId,e);
+    }
+  }
+
+  guardar();
+  statusDiv.remove();
+  alert(`✅ Importación completada!\n${procesados} historias importadas\n${errores} errores\nTotal PDFs: ${totalPDFs}`);
+  historias();
+}
+
+function parsearHistoriaClínica(texto){
+  const datos={
+    telefono:'',edad:'',direccion:'',alergico:'',enfermedad:'',
+    diagnosticos:[],observaciones:'',tratamientos:[],proximaCita:''
+  };
+
+  // Extraer teléfono
+  const regexTel=/(?:Teléfono|Tel)[\s:]*(\d{3}[-.\s]?\d{3}[-.\s]?\d{4}|\d{10})/i;
+  const matchTel=texto.match(regexTel);
+  if(matchTel)datos.telefono=matchTel[1];
+
+  // Extraer edad
+  const regexEdad=/(?:Edad|Age)[\s:]*(\d+)/i;
+  const matchEdad=texto.match(regexEdad);
+  if(matchEdad)datos.edad=matchEdad[1];
+
+  // Extraer dirección
+  const regexDir=/(?:Dirección|Direction)[\s:]*([^\n]+)/i;
+  const matchDir=texto.match(regexDir);
+  if(matchDir)datos.direccion=matchDir[1].trim();
+
+  // Extraer alérgico a
+  const regexAler=/(?:Alérgico\s+a|Allergic\s+to)[\s:]*([^\n]+)/i;
+  const matchAler=texto.match(regexAler);
+  if(matchAler)datos.alergico=matchAler[1].trim();
+
+  // Extraer enfermedad crónica
+  const regexEnfer=/(?:Enfermedad|padecimiento)[\s:]*([^\n]+)/i;
+  const matchEnfer=texto.match(regexEnfer);
+  if(matchEnfer)datos.enfermedad=matchEnfer[1].trim();
+
+  // Extraer observaciones
+  const regexObs=/OBSERVACIONES[\s\n]+([^\n]+(?:\n[^\n]+)*?)(?=TRATAMIENTOS|Próxima|$)/i;
+  const matchObs=texto.match(regexObs);
+  if(matchObs)datos.observaciones=matchObs[1].trim();
+
+  return datos;
 }
 
 function agregarRadiografia(indexHistoria){
