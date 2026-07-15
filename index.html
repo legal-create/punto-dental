@@ -214,15 +214,24 @@ function dashboard(){
 }
 
 function pacientes(){
-  let html='<h2>Pacientes</h2>';
-  html+=`<div style="margin-bottom:12px"><input type="text" placeholder="Buscar paciente..." value="${filtroPacientes}" oninput="filtroPacientes=this.value.toLowerCase();pacientes()" style="width:100%;padding:10px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px"></div>`;
-  html+='<div class="table-wrapper"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Edad</th><th>Tratamiento</th><th>Alergias</th><th></th></tr></thead><tbody>';
-  const filtrados=datos.pacientes.filter(p=>p.nombre.toLowerCase().includes(filtroPacientes));
-  filtrados.forEach((p,idx)=>{
-    const i=datos.pacientes.indexOf(p);
-    html+=`<tr><td><input type="text" value="${p.nombre}" oninput="datos.pacientes[${i}].nombre=this.value;guardar()"></td><td><input type="text" value="${p.telefono}" oninput="datos.pacientes[${i}].telefono=this.value;guardar()" style="width:140px"></td><td><input type="number" value="${p.edad}" style="width:50px" oninput="datos.pacientes[${i}].edad=this.value;guardar()"></td><td><select oninput="datos.pacientes[${i}].tipo=this.value;guardar()">${tiposTratamiento.map(t=>`<option ${p.tipo===t?'selected':''}>${t}</option>`).join('')}</select></td><td><input type="text" value="${p.alergias||''}" oninput="datos.pacientes[${i}].alergias=this.value;guardar()"></td><td style="white-space:nowrap"><button class="btn-secondary" style="padding:5px 8px;font-size:10px;margin-right:4px" onclick="extraerTelefonoPDF('${p.nombre}',${i})">📄Tel</button><button class="btn-delete" onclick="if(confirm('¿Eliminar?')){datos.pacientes.splice(${i},1);guardar();pacientes()}">✕</button></td></tr>`;
-  });
-  html+='</tbody></table></div>';
+  let html='<h2>Pacientes ('+datos.pacientes.length+')</h2>';
+  html+=`<div style="margin-bottom:12px"><input type="text" placeholder="🔍 Buscar paciente por nombre..." value="${filtroPacientes}" oninput="filtroPacientes=this.value.toLowerCase();pacientes()" style="width:100%;padding:12px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px;text-transform:uppercase"></div>`;
+
+  const filtrados=datos.pacientes.filter(p=>p.nombre.toLowerCase().includes(filtroPacientes)).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+
+  if(filtroPacientes.length===0){
+    html+='<div class="card" style="padding:20px;text-align:center;color:#5A7A82"><p>Escribe el nombre de un paciente para buscarlo</p><p style="font-size:12px">Total de pacientes: '+datos.pacientes.length+'</p></div>';
+  } else if(filtrados.length===0){
+    html+='<div class="card">No se encontraron pacientes con ese nombre</div>';
+  } else {
+    html+='<div class="table-wrapper"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Edad</th><th>Tratamiento</th><th>Alergias</th><th></th></tr></thead><tbody>';
+    filtrados.forEach((p)=>{
+      const i=datos.pacientes.indexOf(p);
+      html+=`<tr><td><strong>${p.nombre.toUpperCase()}</strong></td><td><input type="text" value="${p.telefono}" oninput="datos.pacientes[${i}].telefono=this.value;guardar()" style="width:140px"></td><td><input type="number" value="${p.edad}" style="width:50px" oninput="datos.pacientes[${i}].edad=this.value;guardar()"></td><td><select oninput="datos.pacientes[${i}].tipo=this.value;guardar()">${tiposTratamiento.map(t=>`<option ${p.tipo===t?'selected':''}>${t}</option>`).join('')}</select></td><td><input type="text" value="${p.alergias||''}" oninput="datos.pacientes[${i}].alergias=this.value;guardar()"></td><td style="white-space:nowrap"><button class="btn-secondary" style="padding:5px 8px;font-size:10px;margin-right:4px" onclick="extraerTelefonoPDF('${p.nombre}',${i})">📄Tel</button><button class="btn-delete" onclick="if(confirm('¿Eliminar?')){datos.pacientes.splice(${i},1);guardar();pacientes()}">✕</button></td></tr>`;
+    });
+    html+='</tbody></table></div>';
+  }
+
   html+=`<button class="btn-add" onclick="datos.pacientes.push({id:uid(),nombre:'',telefono:'',edad:'',tipo:'GENERAL',alergias:'',notas:'',fecha:hoy()});guardar();pacientes()">+ Agregar paciente</button>`;
   document.getElementById('content').innerHTML=html;
 }
@@ -453,11 +462,11 @@ async function sincronizarDrive(){
         if(data.files){
           data.files.forEach(file=>{
             const nombrePaciente=file.name.replace('.pdf','').trim();
-            const nombreLower=nombrePaciente.toLowerCase();
+            const nombreNormalizado=nombrePaciente.toLowerCase().replace(/\s+/g,' ');
             archivosEncontrados++;
-            if(!driveFilesCache[nombreLower]){driveFilesCache[nombreLower]=[];}
-            driveFilesCache[nombreLower].push({...file,driveFileId:file.id});
-            const pacienteExiste=datos.pacientes.find(p=>p.nombre.toLowerCase()===nombreLower);
+            if(!driveFilesCache[nombreNormalizado]){driveFilesCache[nombreNormalizado]=[];}
+            driveFilesCache[nombreNormalizado].push({...file,driveFileId:file.id});
+            const pacienteExiste=datos.pacientes.find(p=>p.nombre.toLowerCase().replace(/\s+/g,' ')===nombreNormalizado);
             if(!pacienteExiste){
               datos.pacientes.push({
                 id:uid(),nombre:nombrePaciente,telefono:'',edad:'',tipo:'GENERAL',alergias:'',notas:'Creado desde Drive',fecha:hoy()
