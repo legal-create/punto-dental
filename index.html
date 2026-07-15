@@ -87,7 +87,7 @@ const st=sessionStorage.getItem('googleToken');if(st){googleAccessToken=st;sessi
 
 <div id="googleModal" class="modal-overlay"><div class="modal"><h3>Conectar con Google Drive</h3><p style="font-size:12px;color:#5A7A82;margin-bottom:16px">Se abrirá una ventana para autorizar acceso a Google Drive y sincronizar historias médicas.</p><button id="googleAuthBtn" class="btn-add" onclick="initGoogleAuth()">Autorizar con Google</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeGoogleModal()">Cancelar</button></div></div>
 
-<div id="importModal" class="modal-overlay"><div class="modal"><h3>📥 Importar Historias Clínicas</h3><p style="font-size:12px;color:#5A7A82;margin-bottom:16px">Importar historias clínicas desde los PDFs de Google Drive. Este proceso puede tardar varios minutos.</p><button class="btn-add" onclick="importarHistoriasDesdeDrive(true)" style="background:#75D0E1">Probar con 5 PDFs</button><button class="btn-add" onclick="importarHistoriasDesdeDrive(false)" style="background:#4A8FA5;margin-top:8px">Importar Todos (1000+)</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeImportModal()">Cancelar</button></div></div>
+<div id="importModal" class="modal-overlay"><div class="modal"><h3>📥 Importar Historias Clínicas</h3><p style="font-size:12px;color:#5A7A82;margin-bottom:16px" id="importModalMsg">Importar historias clínicas desde los PDFs de Google Drive. Este proceso puede tardar varios minutos.</p><button id="importBtn5" class="btn-add" onclick="importarHistoriasDesdeDrive(true)" style="background:#75D0E1">Probar con 5 PDFs</button><button id="importBtnAll" class="btn-add" onclick="importarHistoriasDesdeDrive(false)" style="background:#4A8FA5;margin-top:8px">Importar Todos (1000+)</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeImportModal()">Cancelar</button></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://apis.google.com/js/api.js"></script>
@@ -631,6 +631,11 @@ function closeGoogleModal(){
 }
 
 function openImportModal(){
+  if(!googleAccessToken){
+    alert('Sincroniza con Google Drive primero antes de importar historias.');
+    openGoogleModal();
+    return;
+  }
   document.getElementById('importModal').classList.add('active');
 }
 function closeImportModal(){
