@@ -606,12 +606,12 @@ function mostrarHistoria(){
     <div style="margin-bottom:20px">
       <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">RX (Máx 5)</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <input type="file" id="fileRx${hi}" accept="image/*" style="display:none">
-        <button class="btn-add" onclick="document.getElementById('fileRx${hi}').click()" style="flex:0;white-space:nowrap">+ Agregar RX</button>
-        ${h.radiografias && h.radiografias.length>0?`<button class="btn-secondary" onclick="abrirGaleriaRx(${hi})" style="flex:0;white-space:nowrap">👁️ Mostrar RX</button>`:''}
+        <input type="file" id="fileRx_${hi}" accept="image/*" style="display:none">
+        <button class="btn-add" onclick="document.getElementById('fileRx_${hi}').click()" style="flex:0;white-space:nowrap">+ Agregar RX</button>
+        ${h.radiografias && h.radiografias.length>0?'<button class="btn-secondary" onclick="abrirGaleriaRx('+hi+')" style="flex:0;white-space:nowrap">👁️ Mostrar RX</button>':''}
         <div style="flex:0;white-space:nowrap;padding:8px;background:#F5FBFC;border-radius:8px;font-size:11px;font-weight:600">${(h.radiografias?.length||0)}/5</div>
       </div>
-      ${h.radiografias && h.radiografias.length>0?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">${h.radiografias.map((r,idx)=>`<div style="position:relative;border:1px solid #D8ECF0;border-radius:8px;overflow:hidden;height:100px;cursor:pointer" onclick="abrirGaleriaRx(${hi},${idx})"><img src="${r}" style="width:100%;height:100%;object-fit:cover"><button class="btn-delete" onclick="event.stopPropagation();datos.historias[${hi}].radiografias.splice(${idx},1);guardar();mostrarHistoria()" style="position:absolute;top:2px;right:2px;padding:3px 6px;font-size:10px">✕</button></div>`).join('')}</div>`:''}
+      ${h.radiografias && h.radiografias.length>0?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">'+h.radiografias.map((r,idx)=>'<div style="position:relative;border:1px solid #D8ECF0;border-radius:8px;overflow:hidden;height:100px;cursor:pointer" onclick="abrirGaleriaRx('+hi+','+idx+')"><img src="'+r+'" style="width:100%;height:100%;object-fit:cover"><button class="btn-delete" onclick="event.stopPropagation();datos.historias['+hi+'].radiografias.splice('+idx+',1);guardar();mostrarHistoria()" style="position:absolute;top:2px;right:2px;padding:3px 6px;font-size:10px">✕</button></div>').join('')+'</div>':''}
     </div>
 
     <!-- ODONTOGRAMA MEJORADO -->
