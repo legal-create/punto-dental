@@ -73,6 +73,11 @@ textarea{width:100%;min-height:70px;font-family:inherit;resize:vertical}
 .modal-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;color:#5A7A82}
 </style>
 </head><body>
+<script>
+const h=window.location.hash.substring(1);
+if(h){const p=new URLSearchParams(h);const t=p.get('access_token');if(t){sessionStorage.setItem('googleToken',t);window.location.hash=''}}
+const st=sessionStorage.getItem('googleToken');if(st){googleAccessToken=st;sessionStorage.removeItem('googleToken')}
+</script>
 <div id="login" class="login"><div class="login-box"><h2>Punto Dental</h2><p class="tag">Transformamos sonrisas construyendo confianza</p><input type="text" id="user" placeholder="USUARIO" onkeypress="if(event.key==='Enter')doLogin()"><input type="password" id="pwd" placeholder="CONTRASEÑA" onkeypress="if(event.key==='Enter')doLogin()"><button onclick="doLogin()">ACCEDER</button></div></div>
 <div id="app" style="display:none"><div class="container">
 <div class="header"><div class="logo-circle"><svg width="40" height="40" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#FFFFFF" stroke-width="4"/><circle cx="50" cy="50" r="32" fill="none" stroke="#FFFFFF" stroke-width="2"/><path d="M 30 55 Q 50 70 70 55" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/><g transform="translate(68, 32)"><rect x="0" y="2" width="3" height="14" fill="#FFFFFF"/><rect x="5" y="2" width="3" height="14" fill="#FFFFFF"/><rect x="10" y="2" width="3" height="14" fill="#FFFFFF"/><rect x="0" y="0" width="13" height="3" fill="#FFFFFF"/></g></svg></div><div><h1>Punto Dental</h1><div class="tag">Panel de administración</div></div></div>
@@ -409,22 +414,28 @@ function initGoogleAuth(){
   const clientId=GOOGLE_CLIENT_ID;
   const redirectUri='https://legal-create.github.io/punto-dental/';
   const scope='https://www.googleapis.com/auth/drive.readonly';
-  const authUrl=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
-  window.location.href=authUrl;
+  const authUrl=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=consent`;
+
+  const popup=window.open(authUrl,'GoogleAuth','width=500,height=600');
+
+  const checkPopup=setInterval(()=>{
+    try{
+      if(popup.closed){
+        clearInterval(checkPopup);
+        if(googleAccessToken){
+          closeGoogleModal();
+          sincronizarDrive();
+        }
+      }
+    }catch(e){}
+  },1000);
 }
 
-function capturarTokenDelHash(){
-  const hash=window.location.hash.substring(1);
-  if(!hash)return;
-  const params=new URLSearchParams(hash);
-  const token=params.get('access_token');
-  if(token){
-    googleAccessToken=token;
-    window.location.hash='';
-    closeGoogleModal();
-    sincronizarDrive();
+window.addEventListener('message',(e)=>{
+  if(e.data&&e.data.accessToken){
+    googleAccessToken=e.data.accessToken;
   }
-}
+});
 
 async function sincronizarDrive(){
   if(!googleAccessToken){alert('No autorizado. Intenta de nuevo.');return}
@@ -522,7 +533,6 @@ function imprimirReceta(id){
   win.document.close();
 }
 
-capturarTokenDelHash();
 document.getElementById('login').style.display='flex';
 </script>
 </body>
