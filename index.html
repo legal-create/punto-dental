@@ -432,6 +432,8 @@ async function sincronizarDrive(){
 
   alert('Sincronizando archivos de Google Drive...');
   driveFilesCache={};
+  let archivosEncontrados=0;
+  let pacientesCreados=0;
 
   for(const folderId of DRIVE_FOLDER_IDS){
     try{
@@ -440,11 +442,31 @@ async function sincronizarDrive(){
 
       if(data.files){
         data.files.forEach(file=>{
-          const nombreLower=file.name.toLowerCase().replace('.pdf','');
+          const nombrePaciente=file.name.replace('.pdf','').trim();
+          const nombreLower=nombrePaciente.toLowerCase();
+
+          archivosEncontrados++;
+
           if(!driveFilesCache[nombreLower]){
             driveFilesCache[nombreLower]=[];
           }
           driveFilesCache[nombreLower].push(file);
+
+          // Crear paciente si no existe
+          const pacienteExiste=datos.pacientes.find(p=>p.nombre.toLowerCase()===nombreLower);
+          if(!pacienteExiste){
+            datos.pacientes.push({
+              id:uid(),
+              nombre:nombrePaciente,
+              telefono:'',
+              edad:'',
+              tipo:'GENERAL',
+              alergias:'',
+              notas:'Creado desde sincronización de Drive',
+              fecha:hoy()
+            });
+            pacientesCreados++;
+          }
         });
       }
     }catch(e){
@@ -452,7 +474,8 @@ async function sincronizarDrive(){
     }
   }
 
-  alert('Sincronización completada. Se encontraron '+Object.keys(driveFilesCache).length+' archivos.');
+  guardar();
+  alert(`Sincronización completada.\n${archivosEncontrados} archivos encontrados\n${pacientesCreados} pacientes creados`);
   if(historiaSeleccionada)historias();
 }
 
