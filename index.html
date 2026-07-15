@@ -600,12 +600,12 @@ function mostrarHistoria(){
       <input type="date" value="${h.proximaCita||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="datos.historias[${hi}].proximaCita=this.value;guardar()">
     </div>
 
-    <!-- RADIOGRAFÍAS -->
+    <!-- RX (RADIOGRAFÍAS) -->
     <div style="margin-bottom:20px">
-      <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">RADIOGRAFÍAS (Máx 5)</div>
+      <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">RX (Máx 5)</div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <input type="file" id="inputRadio" accept="image/*" style="flex:1;padding:8px">
-        <button class="btn-add" onclick="agregarRadiografia(${hi})" style="flex:0;white-space:nowrap">+ Agregar (${(h.radiografias?.length||0)}/5)</button>
+        <input type="file" id="inputRx_${hi}" accept="image/*" onchange="agregarRx(${hi})" style="flex:1;padding:8px">
+        <div style="flex:0;white-space:nowrap;padding:8px;background:#F5FBFC;border-radius:8px;font-size:11px;font-weight:600">${(h.radiografias?.length||0)}/5</div>
       </div>
       ${h.radiografias && h.radiografias.length>0?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">${h.radiografias.map((r,idx)=>`<div style="position:relative;border:1px solid #D8ECF0;border-radius:8px;overflow:hidden;height:100px"><img src="${r}" style="width:100%;height:100%;object-fit:cover"><button class="btn-delete" onclick="datos.historias[${hi}].radiografias.splice(${idx},1);guardar();mostrarHistoria()" style="position:absolute;top:2px;right:2px;padding:3px 6px;font-size:10px">✕</button></div>`).join('')}</div>`:''}
     </div>
@@ -909,10 +909,11 @@ function parsearHistoriaClínica(texto){
   return datos;
 }
 
-function agregarRadiografia(indexHistoria){
-  const input=document.getElementById('inputRadio');
-  if(!input.files||input.files.length===0){alert('Selecciona una imagen');return}
-  if(datos.historias[indexHistoria].radiografias.length>=5){alert('Máximo 5 radiografías');return}
+function agregarRx(indexHistoria){
+  const input=document.getElementById(`inputRx_${indexHistoria}`);
+  if(!input||!input.files||input.files.length===0){return}
+  if(!datos.historias[indexHistoria].radiografias)datos.historias[indexHistoria].radiografias=[];
+  if(datos.historias[indexHistoria].radiografias.length>=5){alert('Máximo 5 RX');return}
 
   const file=input.files[0];
   const reader=new FileReader();
@@ -921,6 +922,9 @@ function agregarRadiografia(indexHistoria){
     guardar();
     input.value='';
     mostrarHistoria();
+  };
+  reader.onerror=function(e){
+    console.error('Error leyendo archivo:',e);
   };
   reader.readAsDataURL(file);
 }
