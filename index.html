@@ -89,6 +89,8 @@ const st=sessionStorage.getItem('googleToken');if(st){googleAccessToken=st;sessi
 
 <div id="importModal" class="modal-overlay"><div class="modal"><h3>📥 Importar Historias Clínicas</h3><p style="font-size:12px;color:#5A7A82;margin-bottom:16px" id="importModalMsg">Importar historias clínicas desde los PDFs de Google Drive. Este proceso puede tardar varios minutos.</p><button id="importBtn5" class="btn-add" onclick="importarHistoriasDesdeDrive(true)" style="background:#75D0E1">Probar con 5 PDFs</button><button id="importBtnAll" class="btn-add" onclick="importarHistoriasDesdeDrive(false)" style="background:#4A8FA5;margin-top:8px">Importar Todos (1000+)</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeImportModal()">Cancelar</button></div></div>
 
+<div id="galeriaRxModal" class="modal-overlay" style="background:rgba(0,0,0,0.9);display:none;z-index:10002"><div style="position:relative;width:90%;height:90%;display:flex;flex-direction:column;align-items:center;justify-content:center"><button onclick="cerrarGaleriaRx()" style="position:absolute;top:20px;right:30px;background:none;border:none;color:#FFFFFF;font-size:32px;cursor:pointer;z-index:10003">✕</button><img id="galeriaRxImg" src="" style="max-width:90%;max-height:80%;object-fit:contain;border-radius:8px"><div style="color:#FFFFFF;margin-top:20px;display:flex;gap:20px;align-items:center"><button id="galeriaRxAnterior" onclick="cambiarRx(-1)" style="background:#75D0E1;color:#FFFFFF;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:16px">← Anterior</button><span id="galeriaRxInfo" style="color:#FFFFFF;font-size:14px">1/1</span><button id="galeriaRxSiguiente" onclick="cambiarRx(1)" style="background:#75D0E1;color:#FFFFFF;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:16px">Siguiente →</button></div></div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -603,12 +605,22 @@ function mostrarHistoria(){
     <!-- RX (RADIOGRAFÍAS) -->
     <div style="margin-bottom:20px">
       <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">RX (Máx 5)</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <input type="file" id="inputRx_${hi}" accept="image/*" onchange="agregarRx(${hi})" style="flex:1;padding:8px">
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <input type="file" id="fileRx${hi}" accept="image/*" style="display:none">
+        <button class="btn-add" onclick="document.getElementById('fileRx${hi}').click()" style="flex:0;white-space:nowrap">+ Agregar RX</button>
+        ${h.radiografias && h.radiografias.length>0?`<button class="btn-secondary" onclick="abrirGaleriaRx(${hi})" style="flex:0;white-space:nowrap">👁️ Mostrar RX</button>`:''}
         <div style="flex:0;white-space:nowrap;padding:8px;background:#F5FBFC;border-radius:8px;font-size:11px;font-weight:600">${(h.radiografias?.length||0)}/5</div>
       </div>
-      ${h.radiografias && h.radiografias.length>0?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">${h.radiografias.map((r,idx)=>`<div style="position:relative;border:1px solid #D8ECF0;border-radius:8px;overflow:hidden;height:100px"><img src="${r}" style="width:100%;height:100%;object-fit:cover"><button class="btn-delete" onclick="datos.historias[${hi}].radiografias.splice(${idx},1);guardar();mostrarHistoria()" style="position:absolute;top:2px;right:2px;padding:3px 6px;font-size:10px">✕</button></div>`).join('')}</div>`:''}
-    </div>
+      ${h.radiografias && h.radiografias.length>0?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">${h.radiografias.map((r,idx)=>`<div style="position:relative;border:1px solid #D8ECF0;border-radius:8px;overflow:hidden;height:100px;cursor:pointer" onclick="abrirGaleriaRx(${hi},${idx})"><img src="${r}" style="width:100%;height:100%;object-fit:cover"><button class="btn-delete" onclick="event.stopPropagation();datos.historias[${hi}].radiografias.splice(${idx},1);guardar();mostrarHistoria()" style="position:absolute;top:2px;right:2px;padding:3px 6px;font-size:10px">✕</button></div>`).join('')}</div>`:''}
+    </div>`;
+
+  // Agregar event listener después de renderizar
+  setTimeout(()=>{
+    const fileInput=document.getElementById('fileRx${hi}');
+    if(fileInput){
+      fileInput.addEventListener('change',()=>cargarRx(${hi},'fileRx${hi}'));
+    }
+  },100);
 
     <!-- ODONTOGRAMA MEJORADO -->
     <div style="margin-bottom:20px">
@@ -640,6 +652,44 @@ function openImportModal(){
 }
 function closeImportModal(){
   document.getElementById('importModal').classList.remove('active');
+}
+
+let galeriaRxActual={historiaId:null,indice:0,total:0};
+
+function abrirGaleriaRx(historiaId,indice=0){
+  const historia=datos.historias.find(h=>h.pacienteId===historiaId);
+  if(!historia||!historia.radiografias||historia.radiografias.length===0){
+    alert('No hay RX para mostrar');
+    return;
+  }
+
+  galeriaRxActual={historiaId,indice,total:historia.radiografias.length};
+  mostrarRxActual();
+  document.getElementById('galeriaRxModal').style.display='flex';
+}
+
+function cerrarGaleriaRx(){
+  document.getElementById('galeriaRxModal').style.display='none';
+  galeriaRxActual={historiaId:null,indice:0,total:0};
+}
+
+function cambiarRx(direccion){
+  galeriaRxActual.indice+=direccion;
+  if(galeriaRxActual.indice<0)galeriaRxActual.indice=galeriaRxActual.total-1;
+  if(galeriaRxActual.indice>=galeriaRxActual.total)galeriaRxActual.indice=0;
+  mostrarRxActual();
+}
+
+function mostrarRxActual(){
+  const historia=datos.historias.find(h=>h.pacienteId===galeriaRxActual.historiaId);
+  if(!historia||!historia.radiografias){return}
+
+  const img=document.getElementById('galeriaRxImg');
+  img.src=historia.radiografias[galeriaRxActual.indice];
+
+  document.getElementById('galeriaRxInfo').textContent=`${galeriaRxActual.indice+1}/${galeriaRxActual.total}`;
+  document.getElementById('galeriaRxAnterior').style.display=galeriaRxActual.total>1?'block':'none';
+  document.getElementById('galeriaRxSiguiente').style.display=galeriaRxActual.total>1?'block':'none';
 }
 
 function initGoogleAuth(){
@@ -909,22 +959,46 @@ function parsearHistoriaClínica(texto){
   return datos;
 }
 
-function agregarRx(indexHistoria){
-  const input=document.getElementById(`inputRx_${indexHistoria}`);
-  if(!input||!input.files||input.files.length===0){return}
-  if(!datos.historias[indexHistoria].radiografias)datos.historias[indexHistoria].radiografias=[];
-  if(datos.historias[indexHistoria].radiografias.length>=5){alert('Máximo 5 RX');return}
+function cargarRx(indexHistoria,inputId){
+  const input=document.getElementById(inputId);
+  if(!input||!input.files||input.files.length===0){
+    console.warn('No file selected');
+    return;
+  }
+
+  if(!datos.historias[indexHistoria]){
+    console.error('Historia no encontrada',indexHistoria);
+    return;
+  }
+
+  if(!datos.historias[indexHistoria].radiografias){
+    datos.historias[indexHistoria].radiografias=[];
+  }
+
+  if(datos.historias[indexHistoria].radiografias.length>=5){
+    alert('Máximo 5 RX');
+    input.value='';
+    return;
+  }
 
   const file=input.files[0];
+  if(!file){return;}
+
   const reader=new FileReader();
   reader.onload=function(e){
-    datos.historias[indexHistoria].radiografias.push(e.target.result);
-    guardar();
-    input.value='';
-    mostrarHistoria();
+    try{
+      datos.historias[indexHistoria].radiografias.push(e.target.result);
+      guardar();
+      input.value='';
+      mostrarHistoria();
+    }catch(err){
+      console.error('Error guardando RX:',err);
+      alert('Error al guardar la imagen');
+    }
   };
   reader.onerror=function(e){
     console.error('Error leyendo archivo:',e);
+    alert('Error al leer la imagen');
   };
   reader.readAsDataURL(file);
 }
