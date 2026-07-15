@@ -531,7 +531,7 @@ function mostrarHistoria(){
       </div>
       <div>
         <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Dirección:</div>
-        <input value="${h.direccion||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="datos.historias[${hi}].direccion=this.value;guardar()">
+        <input id="inputDir_${hi}" value="${h.direccion||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px">
       </div>
       <div>
         <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Teléfono:</div>
@@ -539,14 +539,14 @@ function mostrarHistoria(){
       </div>
       <div>
         <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Alérgico a:</div>
-        <input value="${h.alergicoA||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="datos.historias[${hi}].alergicoA=this.value;guardar()">
+        <input id="inputAler_${hi}" value="${h.alergicoA||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px">
       </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:16px;padding:12px;background:#F5FBFC;border-radius:8px">
       <div>
         <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Enfermedad o padecimiento crónico:</div>
-        <input value="${h.enfermedadCronica||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="datos.historias[${hi}].enfermedadCronica=this.value;guardar()">
+        <input id="inputEnf_${hi}" value="${h.enfermedadCronica||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px">
       </div>
     </div>
 
@@ -626,13 +626,41 @@ function mostrarHistoria(){
 
   document.getElementById('content').innerHTML=html;
 
-  // Agregar event listener para RX después de renderizar
+  // Agregar event listeners después de renderizar
   setTimeout(()=>{
-    const fileInput=document.getElementById(`fileRx${hi}`);
+    // RX
+    const fileInput=document.getElementById(`fileRx_${hi}`);
     if(fileInput){
-      fileInput.addEventListener('change',()=>cargarRx(hi,`fileRx${hi}`));
+      fileInput.addEventListener('change',()=>cargarRx(hi,`fileRx_${hi}`));
     }
-  },100);
+
+    // Dirección
+    const inputDir=document.getElementById(`inputDir_${hi}`);
+    if(inputDir){
+      inputDir.addEventListener('input',()=>{
+        datos.historias[hi].direccion=inputDir.value;
+        guardar();
+      });
+    }
+
+    // Alérgico a
+    const inputAler=document.getElementById(`inputAler_${hi}`);
+    if(inputAler){
+      inputAler.addEventListener('input',()=>{
+        datos.historias[hi].alergicoA=inputAler.value;
+        guardar();
+      });
+    }
+
+    // Enfermedad
+    const inputEnf=document.getElementById(`inputEnf_${hi}`);
+    if(inputEnf){
+      inputEnf.addEventListener('input',()=>{
+        datos.historias[hi].enfermedadCronica=inputEnf.value;
+        guardar();
+      });
+    }
+  },50);
 }
 
 function openGoogleModal(){
