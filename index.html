@@ -369,35 +369,80 @@ function toggleDiente(numero){
   guardar();mostrarHistoria();
 }
 
+function dibujarDiente(x,y,tipo,numero,odontograma,hi){
+  // tipo: 'incisivo', 'canino', 'premolar', 'molar', 'leche'
+  const estado=odontograma[numero]||'sano';
+  const bgCirculo=estado==='sano'?'#FFFFFF':estado==='tratado'?'#FFD9B8':'#FFC9C9';
+  const bordeCirculo=estado==='sano'?'#B8D8DE':estado==='tratado'?'#E8A85C':'#E88A8A';
+
+  let svg='';
+  // Dibujar diente simple como forma
+  if(tipo==='leche'){
+    svg=`<svg width="30" height="35" style="margin:0 2px"><ellipse cx="15" cy="8" rx="8" ry="7" fill="#F5F5F5" stroke="#999" stroke-width="1"/><path d="M 10 15 L 8 28 L 22 28 L 20 15" fill="#F5F5F5" stroke="#999" stroke-width="1"/></svg>`;
+  } else {
+    svg=`<svg width="30" height="40" style="margin:0 2px"><ellipse cx="15" cy="8" rx="8" ry="7" fill="#F5F5F5" stroke="#999" stroke-width="1"/><path d="M 10 15 L 7 33 L 23 33 L 20 15" fill="#F5F5F5" stroke="#999" stroke-width="1"/></svg>`;
+  }
+
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+    <div>${svg}</div>
+    <button onclick="toggleDiente('${numero}')" style="width:26px;height:26px;border-radius:50%;background:${bgCirculo};border:2px solid ${bordeCirculo};cursor:pointer;padding:0;font-size:0"></button>
+    <div style="font-size:10px;font-weight:700;color:#75D0E1">${numero}</div>
+  </div>`;
+}
+
 function renderOdontogramaImprovisado(odontograma,hi){
-  let html=`<div style="text-align:center;font-size:12px;color:#5A7A82;font-weight:700;margin-bottom:16px">DIENTES SUPERIORES</div>
-  <div style="display:flex;justify-content:center;gap:6px;margin-bottom:20px;flex-wrap:wrap">`;
+  let html=`<div style="overflow-x:auto;padding:10px 0">
 
-  // Dientes superiores (11-18 izq, 21-28 der)
-  [11,12,13,14,15,16,17,18,21,22,23,24,25,26,27,28].forEach(n=>{
-    const estado=odontograma[n]||'sano';
-    const bg=estado==='sano'?'#FFFFFF':estado==='tratado'?'#FFD9B8':'#FFC9C9';
-    const borde=estado==='sano'?'#B8D8DE':estado==='tratado'?'#E8A85C':'#E88A8A';
-    html+=`<button onclick="toggleDiente('${n}')" style="width:38px;height:38px;border:2px solid ${borde};background:${bg};border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;color:#1A1A1A;transition:all 0.3s;hover:transform:scale(1.1)">${n}</button>`;
+  <!-- DIENTES PERMANENTES SUPERIORES -->
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:11px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:8px">Dientes Permanentes Superiores</div>
+    <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin-bottom:8px">`;
+
+  [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28].forEach(n=>{
+    html+=dibujarDiente(0,0,'permanente',n,odontograma,hi);
   });
 
-  html+=`</div>
-  <div style="text-align:center;font-size:12px;color:#5A7A82;font-weight:700;margin-bottom:16px">DIENTES INFERIORES</div>
-  <div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px;flex-wrap:wrap">`;
+  html+=`</div></div>
 
-  // Dientes inferiores (41-48 izq, 31-38 der)
-  [41,42,43,44,45,46,47,48,31,32,33,34,35,36,37,38].forEach(n=>{
-    const estado=odontograma[n]||'sano';
-    const bg=estado==='sano'?'#FFFFFF':estado==='tratado'?'#FFD9B8':'#FFC9C9';
-    const borde=estado==='sano'?'#B8D8DE':estado==='tratado'?'#E8A85C':'#E88A8A';
-    html+=`<button onclick="toggleDiente('${n}')" style="width:38px;height:38px;border:2px solid ${borde};background:${bg};border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;color:#1A1A1A;transition:all 0.3s">${n}</button>`;
+  <!-- DIENTES DE LECHE SUPERIORES -->
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:11px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:8px">Dientes de Leche Superiores</div>
+    <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin-bottom:8px">`;
+
+  [55,54,53,52,51,61,62,63,64,65].forEach(n=>{
+    html+=dibujarDiente(0,0,'leche',n,odontograma,hi);
   });
 
-  html+=`</div>
-  <div style="display:flex;justify-content:center;gap:20px;padding:12px;background:#F5FBFC;border-radius:8px;font-size:11px;color:#5A7A82;flex-wrap:wrap">
-    <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:16px;background:#FFFFFF;border:2px solid #B8D8DE;border-radius:4px"></span>Sano</span>
-    <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:16px;background:#FFD9B8;border:2px solid #E8A85C;border-radius:4px"></span>Tratado</span>
-    <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:16px;background:#FFC9C9;border:2px solid #E88A8A;border-radius:4px"></span>Extraído</span>
+  html+=`</div></div>
+
+  <!-- DIENTES DE LECHE INFERIORES -->
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:11px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:8px">Dientes de Leche Inferiores</div>
+    <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin-bottom:8px">`;
+
+  [85,84,83,82,81,71,72,73,74,75].forEach(n=>{
+    html+=dibujarDiente(0,0,'leche',n,odontograma,hi);
+  });
+
+  html+=`</div></div>
+
+  <!-- DIENTES PERMANENTES INFERIORES -->
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:11px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:8px">Dientes Permanentes Inferiores</div>
+    <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin-bottom:8px">`;
+
+  [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38].forEach(n=>{
+    html+=dibujarDiente(0,0,'permanente',n,odontograma,hi);
+  });
+
+  html+=`</div></div>
+
+  <!-- LEYENDA -->
+  <div style="display:flex;justify-content:center;gap:20px;padding:12px;background:#F5FBFC;border-radius:8px;font-size:10px;color:#5A7A82;flex-wrap:wrap;margin-top:12px">
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background:#FFFFFF;border:2px solid #B8D8DE;border-radius:50%"></span>Sano</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background:#FFD9B8;border:2px solid #E8A85C;border-radius:50%"></span>Tratado</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background:#FFC9C9;border:2px solid #E88A8A;border-radius:50%"></span>Extraído</span>
+  </div>
   </div>`;
 
   return html;
