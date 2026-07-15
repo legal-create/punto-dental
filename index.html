@@ -606,7 +606,7 @@ function mostrarHistoria(){
     <div style="margin-bottom:20px">
       <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">RX (Máx 5)</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <input type="file" id="fileRx_${hi}" accept="image/*" onchange="cargarRx(${hi},'fileRx_${hi}')" style="display:none">
+        <input type="file" id="fileRx_${hi}" accept="image/*" onchange="procesarRx(${hi},this)" style="display:none">
         <button type="button" class="btn-add" onclick="document.getElementById('fileRx_${hi}').click()" style="flex:0;white-space:nowrap">+ Agregar RX</button>
         ${h.radiografias && h.radiografias.length>0?'<button class="btn-secondary" onclick="abrirGaleriaRx('+hi+')" style="flex:0;white-space:nowrap">👁️ Mostrar RX</button>':''}
         <div style="flex:0;white-space:nowrap;padding:8px;background:#F5FBFC;border-radius:8px;font-size:11px;font-weight:600">${(h.radiografias?.length||0)}/5</div>
@@ -1068,8 +1068,14 @@ function agregarTratamiento(hi){
   mostrarHistoria();
 }
 
-function cargarRx(indexHistoria,inputId){
-  const input=document.getElementById(inputId);
+function procesarRx(indexHistoria,inputElement){
+  cargarRx(indexHistoria,inputElement);
+}
+
+function cargarRx(indexHistoria,input){
+  if(typeof input==='string'){
+    input=document.getElementById(input);
+  }
   if(!input||!input.files||input.files.length===0){
     return;
   }
