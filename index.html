@@ -216,16 +216,32 @@ function dashboard(){
 
 function pacientes(){
   let html='<h2>Pacientes ('+datos.pacientes.length+')</h2>';
-  html+=`<div style="margin-bottom:12px"><input type="text" placeholder="🔍 Buscar paciente por nombre..." value="${filtroPacientes.toUpperCase()}" oninput="filtroPacientes=this.value.toLowerCase();this.value=this.value.toUpperCase();clearTimeout(timeoutBusqueda);timeoutBusqueda=setTimeout(pacientes,150)" style="width:100%;padding:12px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px;letter-spacing:0.5px"></div>`;
+  html+=`<div id="buscadorPacientes" style="margin-bottom:12px"><input id="inputBuscador" type="text" placeholder="🔍 Buscar paciente por nombre..." style="width:100%;padding:12px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px;letter-spacing:0.5px"></div>`;
+  html+=`<div id="tablaPacientes"></div>`;
+  html+=`<button class="btn-add" onclick="datos.pacientes.push({id:uid(),nombre:'',telefono:'',edad:'',tipo:'GENERAL',alergias:'',notas:'',fecha:hoy()});guardar();pacientes()">+ Agregar paciente</button>`;
+  document.getElementById('content').innerHTML=html;
 
+  const inputBuscador=document.getElementById('inputBuscador');
+  inputBuscador.value=filtroPacientes.toUpperCase();
+  inputBuscador.oninput=function(){
+    filtroPacientes=this.value.toLowerCase();
+    this.value=this.value.toUpperCase();
+    actualizarTablaPacientes();
+  };
+
+  actualizarTablaPacientes();
+}
+
+function actualizarTablaPacientes(){
   const filtrados=datos.pacientes.filter(p=>p.nombre.toLowerCase().includes(filtroPacientes)).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  let html='';
 
   if(filtroPacientes.length===0){
-    html+='<div class="card" style="padding:20px;text-align:center;color:#5A7A82"><p>Escribe el nombre de un paciente para buscarlo</p><p style="font-size:12px">Total de pacientes: '+datos.pacientes.length+'</p></div>';
+    html='<div class="card" style="padding:20px;text-align:center;color:#5A7A82"><p>Escribe el nombre de un paciente para buscarlo</p><p style="font-size:12px">Total de pacientes: '+datos.pacientes.length+'</p></div>';
   } else if(filtrados.length===0){
-    html+='<div class="card">No se encontraron pacientes con ese nombre</div>';
+    html='<div class="card">No se encontraron pacientes con ese nombre</div>';
   } else {
-    html+='<div class="table-wrapper"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Edad</th><th>Tratamiento</th><th>Alergias</th><th></th></tr></thead><tbody>';
+    html='<div class="table-wrapper"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Edad</th><th>Tratamiento</th><th>Alergias</th><th></th></tr></thead><tbody>';
     filtrados.forEach((p)=>{
       const i=datos.pacientes.indexOf(p);
       html+=`<tr><td><strong>${p.nombre.toUpperCase()}</strong></td><td><input type="text" value="${p.telefono}" oninput="datos.pacientes[${i}].telefono=this.value;guardar()" style="width:140px"></td><td><input type="number" value="${p.edad}" style="width:50px" oninput="datos.pacientes[${i}].edad=this.value;guardar()"></td><td><select oninput="datos.pacientes[${i}].tipo=this.value;guardar()">${tiposTratamiento.map(t=>`<option ${p.tipo===t?'selected':''}>${t}</option>`).join('')}</select></td><td><input type="text" value="${p.alergias||''}" oninput="datos.pacientes[${i}].alergias=this.value;guardar()"></td><td style="white-space:nowrap"><button class="btn-secondary" style="padding:5px 8px;font-size:10px;margin-right:4px" onclick="extraerTelefonoPDF('${p.nombre}',${i})">📄Tel</button><button class="btn-delete" onclick="if(confirm('¿Eliminar?')){datos.pacientes.splice(${i},1);guardar();pacientes()}">✕</button></td></tr>`;
@@ -233,8 +249,7 @@ function pacientes(){
     html+='</tbody></table></div>';
   }
 
-  html+=`<button class="btn-add" onclick="datos.pacientes.push({id:uid(),nombre:'',telefono:'',edad:'',tipo:'GENERAL',alergias:'',notas:'',fecha:hoy()});guardar();pacientes()">+ Agregar paciente</button>`;
-  document.getElementById('content').innerHTML=html;
+  document.getElementById('tablaPacientes').innerHTML=html;
 }
 
 function agenda(){
