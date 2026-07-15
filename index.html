@@ -366,7 +366,52 @@ function toggleDiente(numero){
   const od=datos.historias[hi].odontograma;
   const cur=od[numero]||'sano';
   od[numero]=cur==='sano'?'tratado':(cur==='tratado'?'extraido':'sano');
-  guardar();historias();
+  guardar();mostrarHistoria();
+}
+
+function renderOdontogramaImprovisado(odontograma,hi){
+  const dientes_sup_iz=[18,17,16,15,14,13,12,11];
+  const dientes_sup_de=[21,22,23,24,25,26,27,28];
+  const dientes_inf_iz=[48,47,46,45,44,43,42,41];
+  const dientes_inf_de=[31,32,33,34,35,36,37,38];
+
+  let html='<div style="text-align:center">';
+
+  // Superiores
+  html+='<div style="margin-bottom:16px"><div style="font-size:10px;font-weight:700;color:#5A7A82;margin-bottom:8px;text-transform:uppercase">Dientes Superiores</div>';
+  html+='<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap">';
+
+  [...dientes_sup_iz.reverse(),...dientes_sup_de].forEach(n=>{
+    const estado=odontograma[n]||'sano';
+    const color=estado==='sano'?'#FFFFFF':estado==='tratado'?'#FFD9B8':'#FFC9C9';
+    const borde=estado==='sano'?'#B8D8DE':estado==='tratado'?'#E8A85C':'#E88A8A';
+    html+=`<button onclick="toggleDiente('${n}')" style="width:40px;height:40px;border:2px solid ${borde};background:${color};border-radius:6px;cursor:pointer;font-weight:700;font-size:12px;color:#1A1A1A;transition:all 0.2s">${n}</button>`;
+  });
+
+  html+='</div></div>';
+
+  // Inferiores
+  html+='<div style="padding-top:12px;border-top:2px solid #E0EEF1"><div style="font-size:10px;font-weight:700;color:#5A7A82;margin-bottom:8px;text-transform:uppercase">Dientes Inferiores</div>';
+  html+='<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap">';
+
+  [...dientes_inf_iz.reverse(),...dientes_inf_de].forEach(n=>{
+    const estado=odontograma[n]||'sano';
+    const color=estado==='sano'?'#FFFFFF':estado==='tratado'?'#FFD9B8':'#FFC9C9';
+    const borde=estado==='sano'?'#B8D8DE':estado==='tratado'?'#E8A85C':'#E88A8A';
+    html+=`<button onclick="toggleDiente('${n}')" style="width:40px;height:40px;border:2px solid ${borde};background:${color};border-radius:6px;cursor:pointer;font-weight:700;font-size:12px;color:#1A1A1A;transition:all 0.2s">${n}</button>`;
+  });
+
+  html+='</div></div>';
+
+  // Leyenda
+  html+='<div style="margin-top:12px;padding:8px;background:#FFFFFF;border-radius:6px;font-size:10px;color:#5A7A82">';
+  html+='<span style="margin-right:16px"><span style="display:inline-block;width:12px;height:12px;background:#FFFFFF;border:2px solid #B8D8DE;border-radius:3px;margin-right:4px;vertical-align:middle"></span>Sano</span>';
+  html+='<span style="margin-right:16px"><span style="display:inline-block;width:12px;height:12px;background:#FFD9B8;border:2px solid #E8A85C;border-radius:3px;margin-right:4px;vertical-align:middle"></span>Tratado</span>';
+  html+='<span><span style="display:inline-block;width:12px;height:12px;background:#FFC9C9;border:2px solid #E88A8A;border-radius:3px;margin-right:4px;vertical-align:middle"></span>Extraído</span>';
+  html+='</div>';
+
+  html+='</div>';
+  return html;
 }
 
 let filtroHistorias='';
@@ -423,70 +468,130 @@ function mostrarHistoria(){
   const paciente=datos.pacientes.find(p=>p.id===historiaSeleccionada);
   if(!paciente)return;
 
-  let html='<div style="display:flex;gap:10px;margin-bottom:16px"><button class="btn-secondary" onclick="historiaSeleccionada=null;actualizarListaHistorias()" style="flex:1">← Volver</button><button class="btn-secondary" onclick="generarPDFHistoria()" style="flex:1">📄 PDF</button><button class="btn-secondary" onclick="exportarHistoriaADrive()" style="flex:1">☁️ Drive</button></div>';
   const h=obtenerHistoria(historiaSeleccionada);
   const hi=datos.historias.findIndex(x=>x.pacienteId===historiaSeleccionada);
-  html+='<div class="card"><div class="form-grid">';
-  html+=`<div><label>Nombre</label><input value="${paciente?paciente.nombre:''}" disabled></div>`;
-  html+=`<div><label>Edad</label><input value="${paciente?paciente.edad:''}" disabled></div>`;
-  html+=`<div><label>Teléfono</label><input value="${paciente?paciente.telefono:''}" disabled></div>`;
-  html+=`<div><label>Alérgico a</label><input value="${h.alergicoA}" oninput="datos.historias[${hi}].alergicoA=this.value;guardar()"></div>`;
-  html+=`<div class="full"><label>Dirección</label><input value="${h.direccion}" oninput="datos.historias[${hi}].direccion=this.value;guardar()"></div>`;
-  html+=`<div class="full"><label>Enfermedad o padecimiento crónico</label><input value="${h.enfermedadCronica}" oninput="datos.historias[${hi}].enfermedadCronica=this.value;guardar()"></div>`;
-  html+='</div></div>';
 
-  html+='<h3>Documentos de Google Drive</h3>';
-  const pacienteNombre=paciente?paciente.nombre.toLowerCase():'';
-  const archivosDelPaciente=driveFilesCache[pacienteNombre]||[];
-  if(archivosDelPaciente.length===0){
-    html+='<div class="drive-section"><p style="font-size:12px;color:#5A7A82">No hay documentos para este paciente. Sincroniza con Google Drive para buscar su expediente.</p></div>';
-  } else {
-    html+='<div class="drive-section">';
-    archivosDelPaciente.forEach(f=>{
-      html+=`<div class="drive-file"><div><strong style="font-size:12px">${f.name}</strong><div style="font-size:10px;color:#5A7A82">Modificado: ${new Date(f.modifiedTime).toLocaleDateString('es-MX')}</div></div><button class="btn-download" onclick="descargarPDF('${f.id}','${f.name}')">Descargar</button></div>`;
-    });
-    html+='</div>';
-  }
+  // HTML con diseño del PDF
+  let html=`
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <button class="btn-secondary" onclick="historiaSeleccionada=null;actualizarListaHistorias()" style="flex:1;min-width:100px">← Volver</button>
+    <button class="btn-secondary" onclick="generarPDFDelFormulario()" style="flex:1;min-width:100px">📄 Generar PDF</button>
+    <button class="btn-secondary" onclick="exportarHistoriaADrive()" style="flex:1;min-width:100px">☁️ Exportar Drive</button>
+  </div>
 
-  html+='<h3>Diagnóstico y plan de tratamiento</h3><div class="table-wrapper"><table><thead><tr><th>Descripción</th><th>Costo</th><th></th></tr></thead><tbody>';
+  <div id="formularioHistoria" style="background:#FFFFFF;padding:24px;border-radius:12px;border:1px solid #D6EFF5">
+    <!-- ENCABEZADO -->
+    <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:3px solid #75D0E1">
+      <div style="font-size:24px;font-weight:700;color:#1A1A1A">HISTORIA CLÍNICA</div>
+      <div style="font-size:12px;color:#75D0E1;font-weight:600;margin-top:4px">Punto Dental - Transformamos sonrisas construyendo confianza</div>
+    </div>
+
+    <!-- DATOS BÁSICOS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;padding:12px;background:#F5FBFC;border-radius:8px">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Nombre:</div>
+        <input value="${paciente.nombre}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" disabled>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Edad:</div>
+        <input value="${paciente.edad||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" disabled>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Fecha:</div>
+        <input type="date" value="${hoy()}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="h.fecha=this.value;guardar()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Dirección:</div>
+        <input value="${h.direccion||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="datos.historias[${hi}].direccion=this.value;guardar()">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Teléfono:</div>
+        <input value="${paciente.telefono||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" disabled>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Alérgico a:</div>
+        <input value="${h.alergicoA||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="datos.historias[${hi}].alergicoA=this.value;guardar()">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:16px;padding:12px;background:#F5FBFC;border-radius:8px">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Enfermedad o padecimiento crónico:</div>
+        <input value="${h.enfermedadCronica||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="datos.historias[${hi}].enfermedadCronica=this.value;guardar()">
+      </div>
+    </div>
+
+    <!-- DIAGNÓSTICO Y PLAN DE TRATAMIENTO -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">DIAGNÓSTICO Y PLAN DE TRATAMIENTO</div>
+      <div style="border:1px solid #D8ECF0;border-radius:8px;overflow:hidden">
+        <div class="table-wrapper"><table style="width:100%">
+          <thead><tr style="background:#F5FBFC"><th style="padding:8px;text-align:left;border-bottom:1px solid #D8ECF0;font-size:10px;font-weight:700">Descripción</th><th style="padding:8px;text-align:right;border-bottom:1px solid #D8ECF0;font-size:10px;font-weight:700;width:80px">Costo</th><th style="width:30px"></th></tr></thead>
+          <tbody>`;
+
   h.diagnosticos.forEach((d,i)=>{
-    html+=`<tr><td><input type="text" value="${d.descripcion}" oninput="datos.historias[${hi}].diagnosticos[${i}].descripcion=this.value;guardar()"></td><td><input type="number" value="${d.costo}" style="width:80px" oninput="datos.historias[${hi}].diagnosticos[${i}].costo=parseFloat(this.value||0);guardar()"></td><td><button class="btn-delete" onclick="datos.historias[${hi}].diagnosticos.splice(${i},1);guardar();historias()">✕</button></td></tr>`;
+    html+=`<tr style="border-bottom:1px solid #F0F7F9"><td style="padding:8px"><input type="text" value="${d.descripcion}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].diagnosticos[${i}].descripcion=this.value;guardar()"></td><td style="padding:8px"><input type="number" value="${d.costo}" style="width:70px;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].diagnosticos[${i}].costo=parseFloat(this.value||0);guardar()"></td><td style="padding:4px"><button class="btn-delete" onclick="datos.historias[${hi}].diagnosticos.splice(${i},1);guardar();mostrarHistoria()" style="padding:4px 6px">✕</button></td></tr>`;
   });
-  html+='</tbody></table></div>';
-  html+=`<button class="btn-add" onclick="datos.historias[${hi}].diagnosticos.push({descripcion:'',costo:0});guardar();historias()">+ Agregar diagnóstico</button>`;
 
-  html+='<h3>Observaciones</h3>';
-  html+=`<textarea oninput="datos.historias[${hi}].observaciones=this.value;guardar()">${h.observaciones}</textarea>`;
+  html+=`</tbody></table></div>
+        <button class="btn-add" onclick="datos.historias[${hi}].diagnosticos.push({descripcion:'',costo:0});guardar();mostrarHistoria()" style="width:100%;margin:8px 0;border-radius:0">+ Agregar diagnóstico</button>
+      </div>
+    </div>
 
-  html+='<h3>Tratamientos por realizar</h3><div class="table-wrapper"><table><thead><tr><th>Fecha</th><th>Tx por realizar</th><th>Costo</th><th>Abono</th><th>Saldo</th><th></th></tr></thead><tbody>';
+    <!-- OBSERVACIONES -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">OBSERVACIONES</div>
+      <textarea style="width:100%;min-height:80px;padding:10px;border:1px solid #D8ECF0;border-radius:8px;font-family:inherit" oninput="datos.historias[${hi}].observaciones=this.value;guardar()">${h.observaciones||''}</textarea>
+    </div>
+
+    <!-- TRATAMIENTOS REALIZADOS -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">TRATAMIENTOS REALIZADOS</div>
+      <div class="table-wrapper"><table style="width:100%">
+        <thead><tr style="background:#F5FBFC"><th style="padding:8px;text-align:center;border-bottom:1px solid #D8ECF0;font-size:10px;font-weight:700;width:90px">Fecha</th><th style="padding:8px;text-align:left;border-bottom:1px solid #D8ECF0;font-size:10px;font-weight:700;flex:1">TX por Realizar</th><th style="padding:8px;text-align:right;border-bottom:1px solid #D8ECF0;font-size:10px;font-weight:700;width:70px">Costo</th><th style="padding:8px;text-align:right;border-bottom:1px solid #D8ECF0;font-size:10px;font-weight:700;width:70px">Abono</th><th style="padding:8px;text-align:right;border-bottom:1px solid #D8ECF0;font-size:10px;font-weight:700;width:70px">Saldo</th><th style="width:30px"></th></tr></thead>
+        <tbody>`;
+
   h.tratamientos.forEach((t,i)=>{
     const saldo=(t.costo||0)-(t.abono||0);
-    html+=`<tr><td><input type="date" value="${t.fecha}" oninput="datos.historias[${hi}].tratamientos[${i}].fecha=this.value;guardar()"></td><td><input type="text" value="${t.tx}" oninput="datos.historias[${hi}].tratamientos[${i}].tx=this.value;guardar()"></td><td><input type="number" value="${t.costo}" style="width:70px" oninput="datos.historias[${hi}].tratamientos[${i}].costo=parseFloat(this.value||0);guardar()"></td><td><input type="number" value="${t.abono}" style="width:70px" oninput="datos.historias[${hi}].tratamientos[${i}].abono=parseFloat(this.value||0);guardar()"></td><td>${fmt(saldo)}</td><td><button class="btn-delete" onclick="datos.historias[${hi}].tratamientos.splice(${i},1);guardar();historias()">✕</button></td></tr>`;
+    html+=`<tr style="border-bottom:1px solid #F0F7F9">
+      <td style="padding:8px"><input type="date" value="${t.fecha}" style="width:85px;padding:6px;border:1px solid #D8ECF0;border-radius:4px;font-size:11px" oninput="datos.historias[${hi}].tratamientos[${i}].fecha=this.value;guardar()"></td>
+      <td style="padding:8px"><input type="text" value="${t.tx}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].tratamientos[${i}].tx=this.value;guardar()"></td>
+      <td style="padding:8px"><input type="number" value="${t.costo}" style="width:65px;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].tratamientos[${i}].costo=parseFloat(this.value||0);guardar()"></td>
+      <td style="padding:8px"><input type="number" value="${t.abono}" style="width:65px;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].tratamientos[${i}].abono=parseFloat(this.value||0);guardar()"></td>
+      <td style="padding:8px;text-align:right;font-weight:600">${fmt(saldo)}</td>
+      <td style="padding:4px"><button class="btn-delete" onclick="datos.historias[${hi}].tratamientos.splice(${i},1);guardar();mostrarHistoria()" style="padding:4px 6px">✕</button></td>
+    </tr>`;
   });
-  html+='</tbody></table></div>';
-  html+=`<button class="btn-add" onclick="datos.historias[${hi}].tratamientos.push({fecha:hoy(),tx:'',costo:0,abono:0});guardar();historias()">+ Agregar tratamiento</button>`;
 
-  html+=`<h3>Próxima cita recomendada</h3><input type="date" value="${h.proximaCita||''}" oninput="datos.historias[${hi}].proximaCita=this.value;guardar()" style="padding:10px;border:1px solid #D8ECF0;border-radius:8px;width:100%">`;
+  html+=`</tbody></table></div>
+      <button class="btn-add" onclick="datos.historias[${hi}].tratamientos.push({fecha:hoy(),tx:'',costo:0,abono:0});guardar();mostrarHistoria()" style="width:100%;margin:8px 0;border-radius:0">+ Agregar tratamiento</button>
+    </div>
 
-  html+='<h3>Radiografías</h3>';
-  if(!h.radiografias)h.radiografias=[];
-  html+='<div style="margin-bottom:12px"><input type="file" id="inputRadio" accept="image/*" style="padding:10px;border:1px solid #D8ECF0;border-radius:8px;width:100%"><button class="btn-add" onclick="agregarRadiografia('+hi+')" style="margin-top:8px">+ Agregar radiografía ('+(h.radiografias.length||0)+'/5)</button></div>';
-  if(h.radiografias.length>0){
-    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:12px">';
-    h.radiografias.forEach((r,idx)=>{
-      html+=`<div style="position:relative"><img src="${r}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;border:1px solid #D8ECF0"><button class="btn-delete" onclick="datos.historias[${hi}].radiografias.splice(${idx},1);guardar();mostrarHistoria()" style="position:absolute;top:4px;right:4px;padding:4px 8px">✕</button></div>`;
-    });
-    html+='</div>';
-  }
+    <!-- PRÓXIMA CITA -->
+    <div style="margin-bottom:20px;padding:12px;background:#F5FBFC;border-radius:8px">
+      <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:6px">Próxima Cita Recomendada:</div>
+      <input type="date" value="${h.proximaCita||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="datos.historias[${hi}].proximaCita=this.value;guardar()">
+    </div>
 
-  html+='<h3>Odontograma</h3><div class="odonto-block">';
-  html+='<div class="odonto-row">'+renderDientes(dientesPermanentesSup.slice(0,8),h.odontograma)+renderDientes(dientesPermanentesSup.slice(8),h.odontograma)+'</div>';
-  html+='<div class="odonto-row">'+renderDientes(dientesLecheSup.slice(0,5),h.odontograma)+renderDientes(dientesLecheSup.slice(5),h.odontograma)+'</div>';
-  html+='<div class="odonto-divider"></div>';
-  html+='<div class="odonto-row">'+renderDientes(dientesLecheInf.slice(0,4),h.odontograma)+renderDientes(dientesLecheInf.slice(4),h.odontograma)+'</div>';
-  html+='<div class="odonto-row">'+renderDientes(dientesPermanentesInf.slice(0,8),h.odontograma)+renderDientes(dientesPermanentesInf.slice(8),h.odontograma)+'</div>';
-  html+='<div class="legend"><span><i style="background:#FFFFFF"></i> Sano</span><span><i class="tratado" style="background:#FFD9B8"></i> Tratado</span><span><i style="background:#FFC9C9"></i> Extraído</span></div>';
-  html+='</div>';
+    <!-- RADIOGRAFÍAS -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">RADIOGRAFÍAS (Máx 5)</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="file" id="inputRadio" accept="image/*" style="flex:1;padding:8px">
+        <button class="btn-add" onclick="agregarRadiografia(${hi})" style="flex:0;white-space:nowrap">+ Agregar (${(h.radiografias?.length||0)}/5)</button>
+      </div>
+      ${h.radiografias && h.radiografias.length>0?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">${h.radiografias.map((r,idx)=>`<div style="position:relative;border:1px solid #D8ECF0;border-radius:8px;overflow:hidden;height:100px"><img src="${r}" style="width:100%;height:100%;object-fit:cover"><button class="btn-delete" onclick="datos.historias[${hi}].radiografias.splice(${idx},1);guardar();mostrarHistoria()" style="position:absolute;top:2px;right:2px;padding:3px 6px;font-size:10px">✕</button></div>`).join('')}</div>`:''}
+    </div>
+
+    <!-- ODONTOGRAMA MEJORADO -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:12px;text-transform:uppercase">ODONTOGRAMA (Haz clic para marcar)</div>
+      <div style="background:#F9FBFC;padding:16px;border-radius:8px">
+        ${renderOdontogramaImprovisado(h.odontograma,hi)}
+      </div>
+    </div>
+  </div>
+  `;
 
   document.getElementById('content').innerHTML=html;
 }
@@ -749,6 +854,31 @@ async function generarPDFHistoria(){
   }catch(e){
     console.error(e);
     alert('Error generando PDF');
+  }
+}
+
+async function generarPDFDelFormulario(){
+  if(!historiaSeleccionada){alert('Selecciona un paciente');return}
+  const paciente=datos.pacientes.find(p=>p.id===historiaSeleccionada);
+  const h=datos.historias.find(x=>x.pacienteId===historiaSeleccionada);
+  if(!paciente||!h){alert('Historia no encontrada');return}
+
+  try{
+    const formulario=document.getElementById('formularioHistoria');
+    if(!formulario){alert('Error: formulario no encontrado');return}
+
+    const options={
+      margin:10,
+      filename:`HC_${paciente.nombre.replace(/\s+/g,'_')}_${new Date().getFullYear()}.pdf`,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2},
+      jsPDF:{orientation:'portrait',unit:'mm',format:'a4'}
+    };
+
+    html2pdf().set(options).from(formulario).save();
+  }catch(e){
+    console.error(e);
+    alert('Error generando PDF: '+e.message);
   }
 }
 
