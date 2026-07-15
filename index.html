@@ -419,7 +419,6 @@ function mostrarHistoria(){
   if(!paciente)return;
 
   let html='<div style="display:flex;gap:10px;margin-bottom:16px"><button class="btn-secondary" onclick="generarPDFHistoria()" style="flex:1">📄 Descargar PDF</button><button class="btn-secondary" onclick="exportarHistoriaADrive()" style="flex:1">☁️ Exportar a Drive</button></div>';
-  const paciente=datos.pacientes.find(p=>p.id===historiaSeleccionada);
   const h=obtenerHistoria(historiaSeleccionada);
   const hi=datos.historias.findIndex(x=>x.pacienteId===historiaSeleccionada);
   html+='<div class="card"><div class="form-grid">';
