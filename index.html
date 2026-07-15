@@ -563,7 +563,7 @@ function mostrarHistoria(){
   });
 
   html+=`</tbody></table></div>
-        <button class="btn-add" onclick="datos.historias[${hi}].diagnosticos.push({descripcion:'',costo:0});guardar();mostrarHistoria()" style="width:100%;margin:8px 0;border-radius:0">+ Agregar diagnóstico</button>
+        <button class="btn-add" onclick="agregarDiagnostico(${hi})" style="width:100%;margin:8px 0;border-radius:0">+ Agregar diagnóstico</button>
       </div>
     </div>
 
@@ -593,7 +593,7 @@ function mostrarHistoria(){
   });
 
   html+=`</tbody></table></div>
-      <button class="btn-add" onclick="datos.historias[${hi}].tratamientos.push({fecha:hoy(),tx:'',costo:0,abono:0});guardar();mostrarHistoria()" style="width:100%;margin:8px 0;border-radius:0">+ Agregar tratamiento</button>
+      <button class="btn-add" onclick="agregarTratamiento(${hi})" style="width:100%;margin:8px 0;border-radius:0">+ Agregar tratamiento</button>
     </div>
 
     <!-- PRÓXIMA CITA -->
@@ -606,8 +606,8 @@ function mostrarHistoria(){
     <div style="margin-bottom:20px">
       <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">RX (Máx 5)</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <input type="file" id="fileRx_${hi}" accept="image/*" style="display:none">
-        <button class="btn-add" onclick="document.getElementById('fileRx_${hi}').click()" style="flex:0;white-space:nowrap">+ Agregar RX</button>
+        <input type="file" id="fileRx_${hi}" accept="image/*" onchange="cargarRx(${hi},'fileRx_${hi}')" style="display:none">
+        <button type="button" class="btn-add" onclick="document.getElementById('fileRx_${hi}').click()" style="flex:0;white-space:nowrap">+ Agregar RX</button>
         ${h.radiografias && h.radiografias.length>0?'<button class="btn-secondary" onclick="abrirGaleriaRx('+hi+')" style="flex:0;white-space:nowrap">👁️ Mostrar RX</button>':''}
         <div style="flex:0;white-space:nowrap;padding:8px;background:#F5FBFC;border-radius:8px;font-size:11px;font-weight:600">${(h.radiografias?.length||0)}/5</div>
       </div>
@@ -632,7 +632,7 @@ function mostrarHistoria(){
     const diagInputs=document.querySelectorAll('[data-diag]');
     diagInputs.forEach(input=>{
       input.addEventListener('input',()=>{
-        const idx=input.getAttribute('data-diag-idx');
+        const idx=parseInt(input.getAttribute('data-diag-idx'));
         const field=input.getAttribute('data-diag-field');
         if(field==='descripcion'){
           datos.historias[hi].diagnosticos[idx].descripcion=input.value;
@@ -647,9 +647,13 @@ function mostrarHistoria(){
     const tratInputs=document.querySelectorAll('[data-trat]');
     tratInputs.forEach(input=>{
       input.addEventListener('input',()=>{
-        const idx=input.getAttribute('data-trat-idx');
+        const idx=parseInt(input.getAttribute('data-trat-idx'));
         const field=input.getAttribute('data-trat-field');
-        datos.historias[hi].tratamientos[idx][field]=input.value;
+        if(field==='costo'||field==='abono'){
+          datos.historias[hi].tratamientos[idx][field]=parseFloat(input.value||0);
+        }else{
+          datos.historias[hi].tratamientos[idx][field]=input.value;
+        }
         guardar();
       });
     });
@@ -1050,6 +1054,18 @@ function parsearHistoriaClínica(texto){
   if(matchObs)datos.observaciones=matchObs[1].trim();
 
   return datos;
+}
+
+function agregarDiagnostico(hi){
+  datos.historias[hi].diagnosticos.push({descripcion:'',costo:0});
+  guardar();
+  mostrarHistoria();
+}
+
+function agregarTratamiento(hi){
+  datos.historias[hi].tratamientos.push({fecha:hoy(),tx:'',costo:0,abono:0});
+  guardar();
+  mostrarHistoria();
 }
 
 function cargarRx(indexHistoria,inputId){
