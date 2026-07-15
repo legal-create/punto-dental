@@ -389,6 +389,11 @@ function historias(){
 }
 
 function actualizarListaHistorias(){
+  if(historiaSeleccionada){
+    mostrarHistoria();
+    return;
+  }
+
   const filtrados=datos.pacientes.filter(p=>p.nombre.toLowerCase().includes(filtroHistorias)).sort((a,b)=>a.nombre.localeCompare(b.nombre));
   let html='';
 
@@ -406,7 +411,7 @@ function actualizarListaHistorias(){
 
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px">';
   filtrados.forEach(p=>{
-    html+=`<div class="card" style="cursor:pointer;padding:16px;transition:all 0.2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'" onclick="historiaSeleccionada='${p.id}';mostrarHistoria()"><strong style="font-size:14px">${p.nombre.toUpperCase()}</strong><div style="font-size:12px;color:#5A7A82;margin-top:4px">📞 ${p.telefono||'Sin teléfono'}</div><div style="font-size:11px;color:#5A7A82;margin-top:8px">Haz clic para ver historia</div></div>`;
+    html+=`<div class="card" style="cursor:pointer;padding:16px;transition:all 0.2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'" onclick="historiaSeleccionada='${p.id}';actualizarListaHistorias()"><strong style="font-size:14px">${p.nombre.toUpperCase()}</strong><div style="font-size:12px;color:#5A7A82;margin-top:4px">📞 ${p.telefono||'Sin teléfono'}</div><div style="font-size:11px;color:#5A7A82;margin-top:8px">Haz clic para ver historia</div></div>`;
   });
   html+='</div>';
 
@@ -418,7 +423,7 @@ function mostrarHistoria(){
   const paciente=datos.pacientes.find(p=>p.id===historiaSeleccionada);
   if(!paciente)return;
 
-  let html='<div style="display:flex;gap:10px;margin-bottom:16px"><button class="btn-secondary" onclick="generarPDFHistoria()" style="flex:1">📄 Descargar PDF</button><button class="btn-secondary" onclick="exportarHistoriaADrive()" style="flex:1">☁️ Exportar a Drive</button></div>';
+  let html='<div style="display:flex;gap:10px;margin-bottom:16px"><button class="btn-secondary" onclick="historiaSeleccionada=null;actualizarListaHistorias()" style="flex:1">← Volver</button><button class="btn-secondary" onclick="generarPDFHistoria()" style="flex:1">📄 PDF</button><button class="btn-secondary" onclick="exportarHistoriaADrive()" style="flex:1">☁️ Drive</button></div>';
   const h=obtenerHistoria(historiaSeleccionada);
   const hi=datos.historias.findIndex(x=>x.pacienteId===historiaSeleccionada);
   html+='<div class="card"><div class="form-grid">';
