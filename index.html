@@ -215,7 +215,7 @@ function dashboard(){
 
 function pacientes(){
   let html='<h2>Pacientes ('+datos.pacientes.length+')</h2>';
-  html+=`<div style="margin-bottom:12px"><input type="text" placeholder="🔍 Buscar paciente por nombre..." value="${filtroPacientes}" oninput="filtroPacientes=this.value.toLowerCase();pacientes()" style="width:100%;padding:12px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px;text-transform:uppercase"></div>`;
+  html+=`<div style="margin-bottom:12px"><input type="text" placeholder="🔍 Buscar paciente por nombre..." value="${filtroPacientes.toUpperCase()}" oninput="filtroPacientes=this.value.toLowerCase();this.value=this.value.toUpperCase();pacientes()" style="width:100%;padding:12px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px;letter-spacing:0.5px"></div>`;
 
   const filtrados=datos.pacientes.filter(p=>p.nombre.toLowerCase().includes(filtroPacientes)).sort((a,b)=>a.nombre.localeCompare(b.nombre));
 
