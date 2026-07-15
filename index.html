@@ -523,11 +523,11 @@ function mostrarHistoria(){
       </div>
       <div>
         <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Edad:</div>
-        <input value="${paciente.edad||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" disabled>
+        <input id="inputEdad_${hi}" type="number" value="${paciente.edad||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px">
       </div>
       <div>
         <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Fecha:</div>
-        <input type="date" value="${hoy()}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" oninput="h.fecha=this.value;guardar()">
+        <input id="inputFecha_${hi}" type="date" value="${hoy()}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px">
       </div>
       <div>
         <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Dirección:</div>
@@ -535,7 +535,7 @@ function mostrarHistoria(){
       </div>
       <div>
         <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Teléfono:</div>
-        <input value="${paciente.telefono||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px" disabled>
+        <input id="inputTel_${hi}" value="${paciente.telefono||''}" style="width:100%;padding:8px;border:1px solid #D8ECF0;border-radius:6px">
       </div>
       <div>
         <div style="font-size:10px;font-weight:700;color:#5A7A82;text-transform:uppercase;margin-bottom:4px">Alérgico a:</div>
@@ -559,7 +559,7 @@ function mostrarHistoria(){
           <tbody>`;
 
   h.diagnosticos.forEach((d,i)=>{
-    html+=`<tr style="border-bottom:1px solid #F0F7F9"><td style="padding:8px"><input type="text" value="${d.descripcion}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].diagnosticos[${i}].descripcion=this.value;guardar()"></td><td style="padding:8px"><input type="number" value="${d.costo}" style="width:70px;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].diagnosticos[${i}].costo=parseFloat(this.value||0);guardar()"></td><td style="padding:4px"><button class="btn-delete" onclick="datos.historias[${hi}].diagnosticos.splice(${i},1);guardar();mostrarHistoria()" style="padding:4px 6px">✕</button></td></tr>`;
+    html+=`<tr style="border-bottom:1px solid #F0F7F9"><td style="padding:8px"><input type="text" data-diag data-diag-idx="${i}" data-diag-field="descripcion" value="${d.descripcion}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px"></td><td style="padding:8px"><input type="number" data-diag data-diag-idx="${i}" data-diag-field="costo" value="${d.costo}" style="width:70px;padding:6px;border:1px solid #D8ECF0;border-radius:4px"></td><td style="padding:4px"><button class="btn-delete" onclick="datos.historias[${hi}].diagnosticos.splice(${i},1);guardar();mostrarHistoria()" style="padding:4px 6px">✕</button></td></tr>`;
   });
 
   html+=`</tbody></table></div>
@@ -570,7 +570,7 @@ function mostrarHistoria(){
     <!-- OBSERVACIONES -->
     <div style="margin-bottom:20px">
       <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#75D0E1;padding:12px;border-radius:8px;margin-bottom:8px;text-transform:uppercase">OBSERVACIONES</div>
-      <textarea style="width:100%;min-height:80px;padding:10px;border:1px solid #D8ECF0;border-radius:8px;font-family:inherit" oninput="datos.historias[${hi}].observaciones=this.value;guardar()">${h.observaciones||''}</textarea>
+      <textarea id="inputObs_${hi}" style="width:100%;min-height:80px;padding:10px;border:1px solid #D8ECF0;border-radius:8px;font-family:inherit">${h.observaciones||''}</textarea>
     </div>
 
     <!-- TRATAMIENTOS REALIZADOS -->
@@ -583,10 +583,10 @@ function mostrarHistoria(){
   h.tratamientos.forEach((t,i)=>{
     const saldo=(t.costo||0)-(t.abono||0);
     html+=`<tr style="border-bottom:1px solid #F0F7F9">
-      <td style="padding:8px"><input type="date" value="${t.fecha}" style="width:85px;padding:6px;border:1px solid #D8ECF0;border-radius:4px;font-size:11px" oninput="datos.historias[${hi}].tratamientos[${i}].fecha=this.value;guardar()"></td>
-      <td style="padding:8px"><input type="text" value="${t.tx}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].tratamientos[${i}].tx=this.value;guardar()"></td>
-      <td style="padding:8px"><input type="number" value="${t.costo}" style="width:65px;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].tratamientos[${i}].costo=parseFloat(this.value||0);guardar()"></td>
-      <td style="padding:8px"><input type="number" value="${t.abono}" style="width:65px;padding:6px;border:1px solid #D8ECF0;border-radius:4px" oninput="datos.historias[${hi}].tratamientos[${i}].abono=parseFloat(this.value||0);guardar()"></td>
+      <td style="padding:8px"><input type="date" data-trat data-trat-idx="${i}" data-trat-field="fecha" value="${t.fecha}" style="width:85px;padding:6px;border:1px solid #D8ECF0;border-radius:4px;font-size:11px"></td>
+      <td style="padding:8px"><input type="text" data-trat data-trat-idx="${i}" data-trat-field="tx" value="${t.tx}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px"></td>
+      <td style="padding:8px"><input type="number" data-trat data-trat-idx="${i}" data-trat-field="costo" value="${t.costo}" style="width:65px;padding:6px;border:1px solid #D8ECF0;border-radius:4px"></td>
+      <td style="padding:8px"><input type="number" data-trat data-trat-idx="${i}" data-trat-field="abono" value="${t.abono}" style="width:65px;padding:6px;border:1px solid #D8ECF0;border-radius:4px"></td>
       <td style="padding:8px;text-align:right;font-weight:600">${fmt(saldo)}</td>
       <td style="padding:4px"><button class="btn-delete" onclick="datos.historias[${hi}].tratamientos.splice(${i},1);guardar();mostrarHistoria()" style="padding:4px 6px">✕</button></td>
     </tr>`;
@@ -626,7 +626,36 @@ function mostrarHistoria(){
 
   document.getElementById('content').innerHTML=html;
 
-  // Agregar event listeners después de renderizar
+  // Agregar listeners a TODOS los inputs de tabla después de renderizar
+  setTimeout(()=>{
+    // Listeners para inputs de diagnósticos
+    const diagInputs=document.querySelectorAll('[data-diag]');
+    diagInputs.forEach(input=>{
+      input.addEventListener('input',()=>{
+        const idx=input.getAttribute('data-diag-idx');
+        const field=input.getAttribute('data-diag-field');
+        if(field==='descripcion'){
+          datos.historias[hi].diagnosticos[idx].descripcion=input.value;
+        }else if(field==='costo'){
+          datos.historias[hi].diagnosticos[idx].costo=parseFloat(input.value||0);
+        }
+        guardar();
+      });
+    });
+
+    // Listeners para inputs de tratamientos
+    const tratInputs=document.querySelectorAll('[data-trat]');
+    tratInputs.forEach(input=>{
+      input.addEventListener('input',()=>{
+        const idx=input.getAttribute('data-trat-idx');
+        const field=input.getAttribute('data-trat-field');
+        datos.historias[hi].tratamientos[idx][field]=input.value;
+        guardar();
+      });
+    });
+  },50);
+
+  // Agregar event listeners para campos específicos después de renderizar
   setTimeout(()=>{
     // RX
     const fileInput=document.getElementById(`fileRx_${hi}`);
@@ -657,6 +686,42 @@ function mostrarHistoria(){
     if(inputEnf){
       inputEnf.addEventListener('input',()=>{
         datos.historias[hi].enfermedadCronica=inputEnf.value;
+        guardar();
+      });
+    }
+
+    // Edad
+    const inputEdad=document.getElementById(`inputEdad_${hi}`);
+    if(inputEdad){
+      inputEdad.addEventListener('input',()=>{
+        datos.pacientes.find(p=>p.id===historiaSeleccionada).edad=inputEdad.value;
+        guardar();
+      });
+    }
+
+    // Teléfono
+    const inputTel=document.getElementById(`inputTel_${hi}`);
+    if(inputTel){
+      inputTel.addEventListener('input',()=>{
+        datos.pacientes.find(p=>p.id===historiaSeleccionada).telefono=inputTel.value;
+        guardar();
+      });
+    }
+
+    // Fecha
+    const inputFecha=document.getElementById(`inputFecha_${hi}`);
+    if(inputFecha){
+      inputFecha.addEventListener('input',()=>{
+        datos.historias[hi].fecha=inputFecha.value;
+        guardar();
+      });
+    }
+
+    // Observaciones
+    const inputObs=document.getElementById(`inputObs_${hi}`);
+    if(inputObs){
+      inputObs.addEventListener('input',()=>{
+        datos.historias[hi].observaciones=inputObs.value;
         guardar();
       });
     }
@@ -990,12 +1055,11 @@ function parsearHistoriaClínica(texto){
 function cargarRx(indexHistoria,inputId){
   const input=document.getElementById(inputId);
   if(!input||!input.files||input.files.length===0){
-    console.warn('No file selected');
     return;
   }
 
   if(!datos.historias[indexHistoria]){
-    console.error('Historia no encontrada',indexHistoria);
+    console.error('Historia no encontrada');
     return;
   }
 
@@ -1010,22 +1074,63 @@ function cargarRx(indexHistoria,inputId){
   }
 
   const file=input.files[0];
-  if(!file){return;}
+  if(!file)return;
+
+  // Validar tamaño (máx 5MB)
+  if(file.size>5*1024*1024){
+    alert('Imagen muy grande (máx 5MB)');
+    return;
+  }
+
+  // Validar formato
+  const formatosPermitidos=['image/jpeg','image/png','image/webp','image/jpg'];
+  if(!formatosPermitidos.includes(file.type)){
+    alert('Formato no permitido. Usa JPG, PNG o WebP');
+    return;
+  }
 
   const reader=new FileReader();
   reader.onload=function(e){
     try{
-      datos.historias[indexHistoria].radiografias.push(e.target.result);
-      guardar();
-      input.value='';
-      mostrarHistoria();
+      const img=new Image();
+      img.onload=function(){
+        // Comprimir imagen
+        const canvas=document.createElement('canvas');
+        let width=img.width;
+        let height=img.height;
+
+        // Si es más grande que 1200px, reducir
+        const maxDim=1200;
+        if(width>maxDim||height>maxDim){
+          if(width>height){
+            height=(height/width)*maxDim;
+            width=maxDim;
+          }else{
+            width=(width/height)*maxDim;
+            height=maxDim;
+          }
+        }
+
+        canvas.width=width;
+        canvas.height=height;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,width,height);
+
+        // Convertir a JPEG comprimido
+        const dataUrl=canvas.toDataURL('image/jpeg',0.85);
+        datos.historias[indexHistoria].radiografias.push(dataUrl);
+        guardar();
+        input.value='';
+        mostrarHistoria();
+      };
+      img.src=e.target.result;
     }catch(err){
       console.error('Error guardando RX:',err);
-      alert('Error al guardar la imagen');
+      alert('Error al procesar la imagen');
     }
   };
   reader.onerror=function(e){
-    console.error('Error leyendo archivo:',e);
+    console.error('Error leyendo archivo');
     alert('Error al leer la imagen');
   };
   reader.readAsDataURL(file);
