@@ -89,6 +89,7 @@ const st=sessionStorage.getItem('googleToken');if(st){googleAccessToken=st;sessi
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://apis.google.com/js/api.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 const SUPABASE_URL='https://nzbyunsgeotmqwwouugi.supabase.co';
 const SUPABASE_KEY='sb_publishable_xEVrQ0wcO0okc-1ydOtD5w_Tq8i_hzl';
@@ -105,6 +106,7 @@ let historiaSeleccionada=null;
 let fechaAgenda=null;
 let googleAccessToken=null;
 let driveFilesCache={};
+let filtroPacientes='';
 const usuarios={'dra. maria':'1234','consultorio':'1234'};
 const entidades=[{id:'dashboard',nombre:'Dashboard'},{id:'pacientes',nombre:'Pacientes'},{id:'agenda',nombre:'Agenda'},{id:'finanzas',nombre:'Finanzas'},{id:'historias',nombre:'Historias clínicas'},{id:'recetario',nombre:'Recetario'}];
 const tiposTratamiento=['GENERAL','ORTODONCIA','GENERAL Y ORTODONCIA'];
@@ -212,9 +214,13 @@ function dashboard(){
 }
 
 function pacientes(){
-  let html='<h2>Pacientes</h2><div class="table-wrapper"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Edad</th><th>Tratamiento</th><th>Alergias</th><th></th></tr></thead><tbody>';
-  datos.pacientes.forEach((p,i)=>{
-    html+=`<tr><td><input type="text" value="${p.nombre}" oninput="datos.pacientes[${i}].nombre=this.value;guardar()"></td><td><input type="text" value="${p.telefono}" oninput="datos.pacientes[${i}].telefono=this.value;guardar()"></td><td><input type="number" value="${p.edad}" style="width:50px" oninput="datos.pacientes[${i}].edad=this.value;guardar()"></td><td><select oninput="datos.pacientes[${i}].tipo=this.value;guardar()">${tiposTratamiento.map(t=>`<option ${p.tipo===t?'selected':''}>${t}</option>`).join('')}</select></td><td><input type="text" value="${p.alergias||''}" oninput="datos.pacientes[${i}].alergias=this.value;guardar()"></td><td><button class="btn-delete" onclick="if(confirm('¿Eliminar paciente?')){datos.pacientes.splice(${i},1);guardar();pacientes()}">✕</button></td></tr>`;
+  let html='<h2>Pacientes</h2>';
+  html+=`<div style="margin-bottom:12px"><input type="text" placeholder="Buscar paciente..." value="${filtroPacientes}" oninput="filtroPacientes=this.value.toLowerCase();pacientes()" style="width:100%;padding:10px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px"></div>`;
+  html+='<div class="table-wrapper"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Edad</th><th>Tratamiento</th><th>Alergias</th><th></th></tr></thead><tbody>';
+  const filtrados=datos.pacientes.filter(p=>p.nombre.toLowerCase().includes(filtroPacientes));
+  filtrados.forEach((p,idx)=>{
+    const i=datos.pacientes.indexOf(p);
+    html+=`<tr><td><input type="text" value="${p.nombre}" oninput="datos.pacientes[${i}].nombre=this.value;guardar()"></td><td><input type="text" value="${p.telefono}" oninput="datos.pacientes[${i}].telefono=this.value;guardar()" style="width:140px"></td><td><input type="number" value="${p.edad}" style="width:50px" oninput="datos.pacientes[${i}].edad=this.value;guardar()"></td><td><select oninput="datos.pacientes[${i}].tipo=this.value;guardar()">${tiposTratamiento.map(t=>`<option ${p.tipo===t?'selected':''}>${t}</option>`).join('')}</select></td><td><input type="text" value="${p.alergias||''}" oninput="datos.pacientes[${i}].alergias=this.value;guardar()"></td><td style="white-space:nowrap"><button class="btn-secondary" style="padding:5px 8px;font-size:10px;margin-right:4px" onclick="extraerTelefonoPDF('${p.nombre}',${i})">📄Tel</button><button class="btn-delete" onclick="if(confirm('¿Eliminar?')){datos.pacientes.splice(${i},1);guardar();pacientes()}">✕</button></td></tr>`;
   });
   html+='</tbody></table></div>';
   html+=`<button class="btn-add" onclick="datos.pacientes.push({id:uid(),nombre:'',telefono:'',edad:'',tipo:'GENERAL',alergias:'',notas:'',fecha:hoy()});guardar();pacientes()">+ Agregar paciente</button>`;
@@ -430,58 +436,83 @@ window.addEventListener('message',(e)=>{
 async function sincronizarDrive(){
   if(!googleAccessToken){alert('No autorizado. Intenta de nuevo.');return}
 
-  alert('Sincronizando archivos de Google Drive...');
+  alert('Sincronizando archivos de Google Drive... (puede tardar)');
   driveFilesCache={};
   let archivosEncontrados=0;
   let pacientesCreados=0;
 
   for(const folderId of DRIVE_FOLDER_IDS){
     try{
-      const response=await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='application/pdf'&access_token=${googleAccessToken}&fields=files(id,name,modifiedTime)&pageSize=100`);
-      const data=await response.json();
+      let pageToken=null;
+      let hasMore=true;
+      while(hasMore){
+        const url=`https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='application/pdf'&access_token=${googleAccessToken}&fields=files(id,name,modifiedTime),nextPageToken&pageSize=1000${pageToken?'&pageToken='+pageToken:''}`;
+        const response=await fetch(url);
+        const data=await response.json();
 
-      if(data.files){
-        data.files.forEach(file=>{
-          const nombrePaciente=file.name.replace('.pdf','').trim();
-          const nombreLower=nombrePaciente.toLowerCase();
-
-          archivosEncontrados++;
-
-          if(!driveFilesCache[nombreLower]){
-            driveFilesCache[nombreLower]=[];
-          }
-          driveFilesCache[nombreLower].push(file);
-
-          // Crear paciente si no existe
-          const pacienteExiste=datos.pacientes.find(p=>p.nombre.toLowerCase()===nombreLower);
-          if(!pacienteExiste){
-            datos.pacientes.push({
-              id:uid(),
-              nombre:nombrePaciente,
-              telefono:'',
-              edad:'',
-              tipo:'GENERAL',
-              alergias:'',
-              notas:'Creado desde sincronización de Drive',
-              fecha:hoy()
-            });
-            pacientesCreados++;
-          }
-        });
+        if(data.files){
+          data.files.forEach(file=>{
+            const nombrePaciente=file.name.replace('.pdf','').trim();
+            const nombreLower=nombrePaciente.toLowerCase();
+            archivosEncontrados++;
+            if(!driveFilesCache[nombreLower]){driveFilesCache[nombreLower]=[];}
+            driveFilesCache[nombreLower].push({...file,driveFileId:file.id});
+            const pacienteExiste=datos.pacientes.find(p=>p.nombre.toLowerCase()===nombreLower);
+            if(!pacienteExiste){
+              datos.pacientes.push({
+                id:uid(),nombre:nombrePaciente,telefono:'',edad:'',tipo:'GENERAL',alergias:'',notas:'Creado desde Drive',fecha:hoy()
+              });
+              pacientesCreados++;
+            }
+          });
+        }
+        pageToken=data.nextPageToken;
+        hasMore=!!pageToken;
       }
-    }catch(e){
-      console.error('Error sincronizando folder '+folderId,e);
-    }
+    }catch(e){console.error('Error folder '+folderId,e);}
   }
 
   guardar();
-  alert(`Sincronización completada.\n${archivosEncontrados} archivos encontrados\n${pacientesCreados} pacientes creados`);
-  if(historiaSeleccionada)historias();
+  alert(`✅ Sincronización completada.\n${archivosEncontrados} archivos\n${pacientesCreados} pacientes nuevos`);
+  pacientes();
 }
 
 function descargarPDF(fileId,fileName){
   if(!googleAccessToken){alert('No hay sesión activa. Sincroniza con Drive nuevamente.');return}
   window.open(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${googleAccessToken}`,'_blank');
+}
+
+async function extraerTelefonoPDF(nombrePaciente,indexPaciente){
+  if(!googleAccessToken){alert('Sincroniza con Drive primero.');return}
+  const nombreLower=nombrePaciente.toLowerCase();
+  const archivos=driveFilesCache[nombreLower];
+  if(!archivos||archivos.length===0){alert('No hay PDF para este paciente');return}
+  const archivo=archivos[0];
+  try{
+    alert('Extrayendo teléfono...');
+    const pdf=await fetch(`https://www.googleapis.com/drive/v3/files/${archivo.driveFileId}?alt=media&access_token=${googleAccessToken}`).then(r=>r.arrayBuffer());
+    const doc=await pdfjsLib.getDocument({data:pdf}).promise;
+    let telefonoEncontrado='';
+    for(let i=1;i<=Math.min(doc.numPages,3);i++){
+      const page=await doc.getPage(i);
+      const text=await page.getTextContent();
+      const fullText=text.items.map(i=>i.str).join(' ');
+      const regex=/\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b|\b\d{10}\b/;
+      const match=fullText.match(regex);
+      if(match){telefonoEncontrado=match[0];break}
+    }
+    if(telefonoEncontrado){
+      datos.pacientes[indexPaciente].telefono=telefonoEncontrado;
+      guardar();
+      alert('✅ Teléfono encontrado: '+telefonoEncontrado);
+      pacientes();
+    }else{
+      alert('❌ No se encontró teléfono en el PDF');
+    }
+  }catch(e){
+    console.error(e);
+    alert('Error al procesar PDF');
+  }
 }
 
 function logoSvgGrande(){
