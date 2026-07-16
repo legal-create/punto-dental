@@ -138,6 +138,10 @@ async function doLogin(){
     usuarioActual=user;
     rolActual=user==='dra. maria'?'admin':'trabajador';
     userId=user;
+    // Guardar sesión en localStorage para mantenerla tras redirecciones
+    localStorage.setItem('usuarioActual',usuarioActual);
+    localStorage.setItem('rolActual',rolActual);
+    localStorage.setItem('userId',userId);
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
     await cargarDeSupabase();
@@ -145,6 +149,23 @@ async function doLogin(){
     mostrarPestana(rolActual==='admin'?'dashboard':'pacientes');
     setInterval(cargarDeSupabase,2500);
   } else alert('USUARIO O CONTRASEÑA INCORRECTOS');
+}
+
+// Restaurar sesión si existe en localStorage
+function restaurarSesion(){
+  const usuarioGuardado=localStorage.getItem('usuarioActual');
+  const rolGuardado=localStorage.getItem('rolActual');
+  const userIdGuardado=localStorage.getItem('userId');
+
+  if(usuarioGuardado&&rolGuardado&&userIdGuardado){
+    usuarioActual=usuarioGuardado;
+    rolActual=rolGuardado;
+    userId=userIdGuardado;
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    return true;
+  }
+  return false;
 }
 
 async function cargarDeSupabase(){
@@ -1085,13 +1106,15 @@ function captureGoogleToken(){
       localStorage.setItem('googleAccessToken',token);
       // Limpiar URL
       window.history.replaceState({},document.title,window.location.pathname);
-      alert('Autorización exitosa.');
+
       if(window.opener){
-        // Notificar a ventana principal
-        if(window.opener.receiveGoogleToken){
-          window.opener.receiveGoogleToken(token);
-        }
+        // Es el popup - notificar a ventana principal
+        window.opener.googleAccessToken=token;
+        window.opener.localStorage.setItem('googleAccessToken',token);
         window.close();
+      }else{
+        // Es la ventana principal (redirección directa)
+        alert('✓ Autorización exitosa. Ya puedes importar historias.');
       }
       return true;
     }
@@ -1113,6 +1136,14 @@ if(localStorage.getItem('googleAccessToken')){
 
 // Capturar token al cargar
 captureGoogleToken();
+
+// Restaurar sesión si existe
+if(restaurarSesion()){
+  cargarDeSupabase();
+  renderTabs();
+  mostrarPestana(rolActual==='admin'?'dashboard':'pacientes');
+  setInterval(cargarDeSupabase,2500);
+}
 
 async function sincronizarDrive(){
   if(!googleAccessToken){alert('No autorizado. Intenta de nuevo.');return}
