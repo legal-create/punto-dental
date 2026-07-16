@@ -152,7 +152,7 @@ async function doLogin(){
 }
 
 // Restaurar sesión si existe en localStorage
-function restaurarSesion(){
+async function restaurarSesion(){
   const usuarioGuardado=localStorage.getItem('usuarioActual');
   const rolGuardado=localStorage.getItem('rolActual');
   const userIdGuardado=localStorage.getItem('userId');
@@ -163,6 +163,17 @@ function restaurarSesion(){
     userId=userIdGuardado;
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
+
+    // Cargar datos desde Supabase
+    await cargarDeSupabase();
+    renderTabs();
+    mostrarPestana(rolActual==='admin'?'dashboard':'pacientes');
+
+    // Iniciar sincronización periódica
+    if(!window.syncInterval){
+      window.syncInterval=setInterval(cargarDeSupabase,2500);
+    }
+
     return true;
   }
   return false;
@@ -1147,13 +1158,14 @@ if(localStorage.getItem('googleAccessToken')){
 // Capturar token al cargar
 captureGoogleToken();
 
-// Restaurar sesión si existe
-if(restaurarSesion()){
-  cargarDeSupabase();
-  renderTabs();
-  mostrarPestana(rolActual==='admin'?'dashboard':'pacientes');
-  setInterval(cargarDeSupabase,2500);
-}
+// Restaurar sesión si existe (async)
+(async function(){
+  const sesionRestaurada=await restaurarSesion();
+  if(!sesionRestaurada){
+    // No hay sesión guardada, mostrar login
+    console.log('Sin sesión guardada - mostrar login');
+  }
+})();
 
 async function sincronizarDrive(){
   if(!googleAccessToken){alert('No autorizado. Intenta de nuevo.');return}
