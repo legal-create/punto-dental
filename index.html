@@ -1091,31 +1091,41 @@ function initGoogleAuth(){
   const scope='https://www.googleapis.com/auth/drive.readonly';
   const authUrl=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=consent`;
 
-  window.open(authUrl,'GoogleAuth','width=500,height=600');
+  // Guardar URL actual antes de redirigir
+  localStorage.setItem('beforeGoogleAuth',window.location.href);
+
+  // Redirigir directamente (sin popup)
+  window.location.href=authUrl;
 }
 
 // Capturar token del hash de redirección
 function captureGoogleToken(){
   const hash=window.location.hash;
+  console.log('Hash actual:',hash);
+
   if(hash.includes('access_token=')){
     const tokenMatch=hash.match(/access_token=([^&]+)/);
     if(tokenMatch){
       const token=tokenMatch[1];
       googleAccessToken=token;
-      // Guardar en localStorage para que la ventana principal lo lea
+      console.log('Token capturado:',token.substring(0,20)+'...');
+
+      // Guardar en localStorage
       localStorage.setItem('googleAccessToken',token);
+
       // Limpiar URL
       window.history.replaceState({},document.title,window.location.pathname);
 
-      if(window.opener){
-        // Es el popup - notificar a ventana principal
-        window.opener.googleAccessToken=token;
-        window.opener.localStorage.setItem('googleAccessToken',token);
-        window.close();
-      }else{
-        // Es la ventana principal (redirección directa)
-        alert('✓ Autorización exitosa. Ya puedes importar historias.');
+      // Mostrar alerta
+      alert('✓ Autorización exitosa. Ya puedes importar historias.');
+
+      // Si había una página anterior guardada, restaurar
+      const beforeAuth=localStorage.getItem('beforeGoogleAuth');
+      if(beforeAuth){
+        localStorage.removeItem('beforeGoogleAuth');
+        // La sesión ya se restauró automáticamente gracias a restaurarSesion()
       }
+
       return true;
     }
   }
