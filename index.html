@@ -225,7 +225,7 @@ function pacientes(){
   let html='<h2>Pacientes ('+datos.pacientes.length+')</h2>';
   html+=`<div id="buscadorPacientes" style="margin-bottom:12px"><input id="inputBuscador" type="text" placeholder="🔍 Buscar paciente por nombre..." style="width:100%;padding:12px;border:1px solid #D8ECF0;border-radius:8px;font-size:14px;letter-spacing:0.5px"></div>`;
   html+=`<div id="tablaPacientes"></div>`;
-  html+=`<button class="btn-add" onclick="datos.pacientes.push({id:uid(),nombre:'',telefono:'',edad:'',tipo:'GENERAL',alergias:'',notas:'',fecha:hoy()});guardar();pacientes()">+ Agregar paciente</button>`;
+  html+=`<button class="btn-add" onclick="datos.pacientes.push({id:uid(),nombre:'',telefono:'',edad:'',tipo:'GENERAL',alergias:'',notas:'',fecha:hoy()});filtroPacientes='';guardar();pacientes()">+ Agregar paciente</button>`;
   document.getElementById('content').innerHTML=html;
 
   const inputBuscador=document.getElementById('inputBuscador');
@@ -251,7 +251,7 @@ function actualizarTablaPacientes(){
     html='<div class="table-wrapper"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Edad</th><th>Tratamiento</th><th>Alergias</th><th></th></tr></thead><tbody>';
     filtrados.forEach((p)=>{
       const i=datos.pacientes.indexOf(p);
-      html+=`<tr><td><strong>${p.nombre.toUpperCase()}</strong></td><td><input type="text" value="${p.telefono}" oninput="datos.pacientes[${i}].telefono=this.value;guardar()" style="width:140px"></td><td><input type="number" value="${p.edad}" style="width:50px" oninput="datos.pacientes[${i}].edad=this.value;guardar()"></td><td><select oninput="datos.pacientes[${i}].tipo=this.value;guardar()">${tiposTratamiento.map(t=>`<option ${p.tipo===t?'selected':''}>${t}</option>`).join('')}</select></td><td><input type="text" value="${p.alergias||''}" oninput="datos.pacientes[${i}].alergias=this.value;guardar()"></td><td style="white-space:nowrap"><button class="btn-secondary" style="padding:5px 8px;font-size:10px;margin-right:4px" onclick="extraerTelefonoPDF('${p.nombre}',${i})">📄Tel</button><button class="btn-delete" onclick="if(confirm('¿Eliminar?')){datos.pacientes.splice(${i},1);guardar();pacientes()}">✕</button></td></tr>`;
+      html+=`<tr><td><input type="text" value="${p.nombre}" oninput="datos.pacientes[${i}].nombre=this.value.toUpperCase();guardar()" style="width:150px;font-weight:600" placeholder="Nombre..."></td><td><input type="text" value="${p.telefono}" oninput="datos.pacientes[${i}].telefono=this.value;guardar()" style="width:140px"></td><td><input type="number" value="${p.edad}" style="width:50px" oninput="datos.pacientes[${i}].edad=this.value;guardar()"></td><td><select oninput="datos.pacientes[${i}].tipo=this.value;guardar()">${tiposTratamiento.map(t=>`<option ${p.tipo===t?'selected':''}>${t}</option>`).join('')}</select></td><td><input type="text" value="${p.alergias||''}" oninput="datos.pacientes[${i}].alergias=this.value;guardar()"></td><td style="white-space:nowrap"><button class="btn-secondary" style="padding:5px 8px;font-size:10px;margin-right:4px" onclick="extraerTelefonoPDF('${p.nombre}',${i})">📄Tel</button><button class="btn-delete" onclick="if(confirm('¿Eliminar?')){datos.pacientes.splice(${i},1);guardar();pacientes()}">✕</button></td></tr>`;
     });
     html+='</tbody></table></div>';
   }
