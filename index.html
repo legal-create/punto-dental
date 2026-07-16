@@ -831,6 +831,8 @@ function importStep1(){
 }
 
 async function listarPDFsDrive(){
+  console.log('listarPDFsDrive: googleAccessToken=',googleAccessToken?'✓':'✗');
+
   if(!googleAccessToken){
     alert('Debes autorizar acceso a Google Drive primero');
     openGoogleModal();
@@ -1111,36 +1113,51 @@ function initGoogleAuth(){
   window.location.href=authUrl;
 }
 
-// Capturar token del hash de redirección
+// Capturar token del hash o search de redirección
 async function captureGoogleToken(){
-  const hash=window.location.hash;
+  let hash=window.location.hash;
+  let search=window.location.search;
 
+  console.log('Hash:', hash);
+  console.log('Search:', search);
+  console.log('Full location:', window.location.href);
+
+  // Intentar con hash primero
+  let token=null;
   if(hash.includes('access_token=')){
     const tokenMatch=hash.match(/access_token=([^&]+)/);
-    if(tokenMatch){
-      const token=tokenMatch[1];
-      googleAccessToken=token;
-      console.log('✓ Token de Google capturado');
-
-      // Guardar en localStorage
-      localStorage.setItem('googleAccessToken',token);
-
-      // Limpiar URL sin perder sesión
-      window.history.replaceState({},document.title,window.location.pathname);
-
-      // Restaurar sesión si existe
-      const usuarioGuardado=localStorage.getItem('usuarioActual');
-      if(usuarioGuardado){
-        console.log('Restaurando sesión...');
-        await restaurarSesion();
-        alert('✓ Autorización exitosa. Abre el modal de importación.');
-      }else{
-        alert('✓ Token guardado. Haz login y luego importa historias.');
-      }
-
-      return true;
-    }
+    if(tokenMatch) token=tokenMatch[1];
   }
+
+  // Si no en hash, intentar con search
+  if(!token && search.includes('access_token=')){
+    const tokenMatch=search.match(/access_token=([^&]+)/);
+    if(tokenMatch) token=tokenMatch[1];
+  }
+
+  if(token){
+    googleAccessToken=token;
+    console.log('✓ Token de Google capturado');
+
+    // Guardar en localStorage
+    localStorage.setItem('googleAccessToken',token);
+
+    // Limpiar URL sin perder sesión
+    window.history.replaceState({},document.title,window.location.pathname);
+
+    // Restaurar sesión si existe
+    const usuarioGuardado=localStorage.getItem('usuarioActual');
+    if(usuarioGuardado){
+      console.log('Restaurando sesión...');
+      await restaurarSesion();
+      alert('✓ Autorización exitosa. Ya estás en la app.');
+    }else{
+      alert('✓ Token guardado. Haz login y luego importa historias.');
+    }
+
+    return true;
+  }
+
   return false;
 }
 
