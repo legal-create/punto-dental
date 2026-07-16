@@ -797,7 +797,7 @@ function importStep1(){
 }
 
 async function listarPDFsDrive(){
-  if(!gapi.auth.getAuthInstance().isSignedIn.get()){
+  if(!googleAccessToken){
     alert('Debes autorizar acceso a Google Drive primero');
     openGoogleModal();
     return;
@@ -809,20 +809,45 @@ async function listarPDFsDrive(){
 
   try{
     let todosArchivos=[];
+
     for(const folderId of DRIVE_FOLDER_IDS){
-      const res=await gapi.client.drive.files.list({
-        q:`'${folderId}' in parents and mimeType='application/pdf' and trashed=false`,
-        spaces:'drive',
-        pageSize:100,
-        fields:'files(id,name,webViewLink)'
-      });
-      if(res.result.files){
-        todosArchivos=[...todosArchivos,...res.result.files];
+      try{
+        let pageToken=null;
+        let hasMore=true;
+
+        while(hasMore){
+          const url=`https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and mimeType='application/pdf'&access_token=${googleAccessToken}&fields=files(id,name),nextPageToken&pageSize=100${pageToken?'&pageToken='+pageToken:''}`;
+
+          const response=await fetch(url);
+          if(!response.ok){
+            throw new Error('Error en la solicitud: '+response.statusText);
+          }
+
+          const data=await response.json();
+
+          if(data.error){
+            console.warn('Error en carpeta '+folderId+':',data.error);
+            hasMore=false;
+            continue;
+          }
+
+          if(data.files && data.files.length>0){
+            todosArchivos=[...todosArchivos,...data.files];
+          }
+
+          if(data.nextPageToken){
+            pageToken=data.nextPageToken;
+          }else{
+            hasMore=false;
+          }
+        }
+      }catch(folderErr){
+        console.warn('Error procesando carpeta:',folderErr);
       }
     }
 
     if(todosArchivos.length===0){
-      document.getElementById('listaArchivos').innerHTML='<p style="color:#5A7A82">No se encontraron PDFs en Drive</p>';
+      document.getElementById('listaArchivos').innerHTML='<p style="color:#5A7A82">No se encontraron PDFs en Drive. Verifica que los archivos estén en las carpetas correctas.</p>';
       return;
     }
 
@@ -833,7 +858,7 @@ async function listarPDFsDrive(){
     document.getElementById('listaArchivos').innerHTML=html;
   }catch(err){
     console.error('Error listando PDFs:',err);
-    document.getElementById('listaArchivos').innerHTML='<p style="color:#E74C3C">Error: '+err.message+'</p>';
+    document.getElementById('listaArchivos').innerHTML='<p style="color:#E74C3C"><strong>Error:</strong> '+err.message+'<br><small>Intenta autorizar de nuevo con Google Drive</small></p>';
   }
 }
 
@@ -1041,20 +1066,34 @@ function mostrarRxActual(){
 
 function initGoogleAuth(){
   const clientId=GOOGLE_CLIENT_ID;
-  const redirectUri='https://legal-create.github.io/punto-dental/callback.html';
+  const redirectUri='https://legal-create.github.io/punto-dental/';
   const scope='https://www.googleapis.com/auth/drive.readonly';
   const authUrl=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=consent`;
 
   window.open(authUrl,'GoogleAuth','width=500,height=600');
 }
 
-window.addEventListener('message',(e)=>{
-  if(e.data&&e.data.accessToken){
-    googleAccessToken=e.data.accessToken;
-    closeGoogleModal();
-    sincronizarDrive();
+// Capturar token del hash de redirección
+function captureGoogleToken(){
+  const hash=window.location.hash;
+  if(hash.includes('access_token=')){
+    const tokenMatch=hash.match(/access_token=([^&]+)/);
+    if(tokenMatch){
+      googleAccessToken=tokenMatch[1];
+      // Limpiar URL
+      window.history.replaceState({},document.title,window.location.pathname);
+      alert('Autorización exitosa. Puedes cerrar esta ventana.');
+      if(window.opener){
+        window.close();
+      }
+      return true;
+    }
   }
-});
+  return false;
+}
+
+// Capturar token al cargar
+captureGoogleToken();
 
 async function sincronizarDrive(){
   if(!googleAccessToken){alert('No autorizado. Intenta de nuevo.');return}
