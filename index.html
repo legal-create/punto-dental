@@ -78,7 +78,7 @@ const h=window.location.hash.substring(1);
 if(h){const p=new URLSearchParams(h);const t=p.get('access_token');if(t){sessionStorage.setItem('googleToken',t);window.location.hash=''}}
 const st=sessionStorage.getItem('googleToken');if(st){googleAccessToken=st;sessionStorage.removeItem('googleToken')}
 </script>
-<div id="login" class="login"><div class="login-box"><h2>Punto Dental</h2><p class="tag">Transformamos sonrisas construyendo confianza</p><button onclick="iniciarLoginGoogle()" style="width:100%;padding:12px;background:#4285F4;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:16px">🔐 Acceder con Google</button><div style="display:flex;align-items:center;gap:8px;margin:16px 0;color:#5A7A82"><div style="flex:1;height:1px;background:#D8ECF0"></div><span style="font-size:12px">O acceso manual</span><div style="flex:1;height:1px;background:#D8ECF0"></div></div><input type="text" id="user" placeholder="USUARIO" onkeypress="if(event.key==='Enter')doLogin()"><input type="password" id="pwd" placeholder="CONTRASEÑA" onkeypress="if(event.key==='Enter')doLogin()"><button onclick="doLogin()" style="margin-top:8px">ACCEDER</button></div></div>
+<div id="login" class="login"><div class="login-box"><h2>Punto Dental</h2><p class="tag">Transformamos sonrisas construyendo confianza</p><input type="text" id="user" placeholder="USUARIO" onkeypress="if(event.key==='Enter')doLogin()"><input type="password" id="pwd" placeholder="CONTRASEÑA" onkeypress="if(event.key==='Enter')doLogin()"><button onclick="doLogin()">ACCEDER</button></div></div>
 <div id="app" style="display:none"><div class="container">
 <div class="header"><div class="logo-circle"><svg width="40" height="40" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#FFFFFF" stroke-width="4"/><circle cx="50" cy="50" r="32" fill="none" stroke="#FFFFFF" stroke-width="2"/><path d="M 30 55 Q 50 70 70 55" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/><g transform="translate(68, 32)"><rect x="0" y="2" width="3" height="14" fill="#FFFFFF"/><rect x="5" y="2" width="3" height="14" fill="#FFFFFF"/><rect x="10" y="2" width="3" height="14" fill="#FFFFFF"/><rect x="0" y="0" width="13" height="3" fill="#FFFFFF"/></g></svg></div><div><h1>Punto Dental</h1><div class="tag">Panel de administración</div></div></div>
 <div class="tabs" id="tabs"></div>
@@ -130,17 +130,6 @@ const dientesLecheInf=['85','84','83','82','81','71','72','73','74','75'];
 const fmt=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:0}).format(n||0);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const hoy=()=>new Date().toISOString().split('T')[0];
-
-function iniciarLoginGoogle(){
-  const clientId=GOOGLE_CLIENT_ID;
-  const redirectUri='https://legal-create.github.io/punto-dental/';
-  const scope='https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
-  const authUrl=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=consent`;
-
-  // Guardar que venimos de login
-  localStorage.setItem('loginViaGoogle','true');
-  window.location.href=authUrl;
-}
 
 async function doLogin(){
   const user=document.getElementById('user').value.toLowerCase();
