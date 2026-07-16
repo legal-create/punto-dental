@@ -786,7 +786,9 @@ function closeGoogleModal(){
 
 function openImportModal(){
   if(!googleAccessToken){
-    alert('Sincroniza con Google Drive primero antes de importar historias.');
+    if(confirm('Necesitas autorizar con Google Drive primero.\n\n¿Autorizas ahora?')){
+      initGoogleAuth();
+    }
     openGoogleModal();
     return;
   }
@@ -1110,31 +1112,30 @@ function initGoogleAuth(){
 }
 
 // Capturar token del hash de redirección
-function captureGoogleToken(){
+async function captureGoogleToken(){
   const hash=window.location.hash;
-  console.log('Hash actual:',hash);
 
   if(hash.includes('access_token=')){
     const tokenMatch=hash.match(/access_token=([^&]+)/);
     if(tokenMatch){
       const token=tokenMatch[1];
       googleAccessToken=token;
-      console.log('Token capturado:',token.substring(0,20)+'...');
+      console.log('✓ Token de Google capturado');
 
       // Guardar en localStorage
       localStorage.setItem('googleAccessToken',token);
 
-      // Limpiar URL
+      // Limpiar URL sin perder sesión
       window.history.replaceState({},document.title,window.location.pathname);
 
-      // Mostrar alerta
-      alert('✓ Autorización exitosa. Ya puedes importar historias.');
-
-      // Si había una página anterior guardada, restaurar
-      const beforeAuth=localStorage.getItem('beforeGoogleAuth');
-      if(beforeAuth){
-        localStorage.removeItem('beforeGoogleAuth');
-        // La sesión ya se restauró automáticamente gracias a restaurarSesion()
+      // Restaurar sesión si existe
+      const usuarioGuardado=localStorage.getItem('usuarioActual');
+      if(usuarioGuardado){
+        console.log('Restaurando sesión...');
+        await restaurarSesion();
+        alert('✓ Autorización exitosa. Abre el modal de importación.');
+      }else{
+        alert('✓ Token guardado. Haz login y luego importa historias.');
       }
 
       return true;
@@ -1155,15 +1156,16 @@ if(localStorage.getItem('googleAccessToken')){
   googleAccessToken=localStorage.getItem('googleAccessToken');
 }
 
-// Capturar token al cargar
-captureGoogleToken();
-
-// Restaurar sesión si existe (async)
+// Capturar token y restaurar sesión al cargar
 (async function(){
-  const sesionRestaurada=await restaurarSesion();
-  if(!sesionRestaurada){
-    // No hay sesión guardada, mostrar login
-    console.log('Sin sesión guardada - mostrar login');
+  // Primero intentar capturar token de Google
+  const tokenCapturado=await captureGoogleToken();
+  console.log('Token capturado:',tokenCapturado);
+
+  // Si no hay token de Google, intentar restaurar sesión normal
+  if(!tokenCapturado){
+    console.log('Sin redirect de Google, intentando restaurar sesión...');
+    await restaurarSesion();
   }
 })();
 
