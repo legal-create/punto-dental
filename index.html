@@ -512,31 +512,121 @@ async function generarPDF(nombre){
 
 function agenda(){
   let html=`<h2>Citas</h2>
-    <button class="btn-add" onclick="crearCita()">+ Nueva Cita</button>
+    <button class="btn-add" onclick="mostrarCrearCita()">+ Nueva Cita</button>
     <div id="listaCitas" style="margin-top:12px"></div>`;
   document.getElementById('content').innerHTML=html;
   actualizarCitas();
 }
 
-function crearCita(){
-  const paciente=prompt('ID del paciente:');
-  if(paciente){
-    datos.citas.push({id:uid(),pacienteId:paciente,fecha:hoy(),hora:'09:00',tipo:'Consulta',notas:''});
-    guardarDatos();
-    actualizarCitas();
+function mostrarCrearCita(){
+  let html=`<h2>Nueva Cita</h2>
+    <div class="form-grid full">
+      <label>Paciente</label>
+      <select id="selectPaciente" style="width:100%">
+        <option value="">— Seleccionar paciente —</option>`;
+
+  datos.pacientes.forEach(p=>{
+    html+=`<option value="${p.id}">${p.nombre}</option>`;
+  });
+
+  html+=`<option value="NUEVO">+ Paciente nuevo</option>
+      </select>
+
+      <div id="nuevoPacienteBox" style="display:none;margin-top:10px">
+        <label>Nombre del nuevo paciente</label>
+        <input type="text" id="nuevoPacienteNombre" placeholder="Nombre completo">
+      </div>
+
+      <label>Fecha</label>
+      <input type="date" id="citaFecha" value="${hoy()}">
+
+      <label>Hora</label>
+      <input type="time" id="citaHora" value="09:00">
+
+      <label>Tipo de cita</label>
+      <select id="citaTipo">
+        <option>Consulta</option>
+        <option>Limpieza</option>
+        <option>Tratamiento</option>
+        <option>Seguimiento</option>
+      </select>
+
+      <label>Notas</label>
+      <textarea id="citaNotas" placeholder="Observaciones..."></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-add" style="flex:1;margin:0" onclick="guardarNuevaCita()">Guardar Cita</button>
+      <button class="btn-secondary" style="flex:1;margin:0" onclick="agenda()">Cancelar</button>
+    </div>`;
+
+  document.getElementById('content').innerHTML=html;
+
+  // Mostrar/ocultar input de nuevo paciente
+  document.getElementById('selectPaciente').addEventListener('change',function(){
+    const box=document.getElementById('nuevoPacienteBox');
+    if(this.value==='NUEVO'){
+      box.style.display='block';
+      document.getElementById('nuevoPacienteNombre').focus();
+    }else{
+      box.style.display='none';
+    }
+  });
+}
+
+function guardarNuevaCita(){
+  let pacienteId=document.getElementById('selectPaciente').value;
+  const fecha=document.getElementById('citaFecha').value;
+  const hora=document.getElementById('citaHora').value;
+  const tipo=document.getElementById('citaTipo').value;
+  const notas=document.getElementById('citaNotas').value;
+
+  if(!pacienteId){
+    alert('Selecciona un paciente');
+    return;
   }
+
+  // Si es paciente nuevo, crearlo primero
+  if(pacienteId==='NUEVO'){
+    const nombre=document.getElementById('nuevoPacienteNombre').value.trim();
+    if(!nombre){
+      alert('Ingresa el nombre del paciente');
+      return;
+    }
+    pacienteId=uid();
+    datos.pacientes.push({id:pacienteId,nombre,telefono:'',edad:'',tipo:'GENERAL',alergias:'',fecha:hoy()});
+  }
+
+  datos.citas.push({id:uid(),pacienteId,fecha,hora,tipo,notas});
+  guardarDatos();
+  agenda();
 }
 
 function actualizarCitas(){
   let html='<div>';
-  datos.citas.forEach((c,i)=>{
-    const p=datos.pacientes.find(x=>x.id===c.pacienteId);
-    html+=`<div class="card">
-      <div style="font-weight:700">${p?p.nombre:'Desconocido'}</div>
-      <div style="font-size:11px;color:#5A7A82">${c.fecha} a las ${c.hora}</div>
-      <button class="btn-delete" style="margin-top:8px;width:100%" onclick="datos.citas.splice(${i},1);guardarDatos();actualizarCitas()">Eliminar</button>
-    </div>`;
-  });
+
+  if(datos.citas.length===0){
+    html+='<div class="card" style="text-align:center;color:#5A7A82;padding:20px">Sin citas agendadas</div>';
+  }else{
+    // Ordenar citas por fecha y hora
+    const citasOrdenadas=[...datos.citas].sort((a,b)=>{
+      const cmp=a.fecha.localeCompare(b.fecha);
+      return cmp!==0?cmp:a.hora.localeCompare(b.hora);
+    });
+
+    citasOrdenadas.forEach((c,i)=>{
+      const p=datos.pacientes.find(x=>x.id===c.pacienteId);
+      const realIdx=datos.citas.findIndex(x=>x.id===c.id);
+      html+=`<div class="card">
+        <div style="font-weight:700">${p?p.nombre:'Desconocido'}</div>
+        <div style="font-size:11px;color:#5A7A82;margin:4px 0">📅 ${c.fecha} a las ${c.hora}</div>
+        <div style="font-size:11px;color:#5A7A82">🏷️ ${c.tipo}</div>
+        ${c.notas?`<div style="font-size:11px;margin-top:6px;color:#1A1A1A">${c.notas}</div>`:''}
+        <button class="btn-delete" style="margin-top:8px;width:100%" onclick="datos.citas.splice(${realIdx},1);guardarDatos();actualizarCitas()">Eliminar</button>
+      </div>`;
+    });
+  }
+
   html+='</div>';
   document.getElementById('listaCitas').innerHTML=html;
 }
