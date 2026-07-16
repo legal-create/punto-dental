@@ -87,13 +87,14 @@ const st=sessionStorage.getItem('googleToken');if(st){googleAccessToken=st;sessi
 
 <div id="googleModal" class="modal-overlay"><div class="modal"><h3>Conectar con Google Drive</h3><p style="font-size:12px;color:#5A7A82;margin-bottom:16px">Se abrirá una ventana para autorizar acceso a Google Drive y sincronizar historias médicas.</p><button id="googleAuthBtn" class="btn-add" onclick="initGoogleAuth()">Autorizar con Google</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeGoogleModal()">Cancelar</button></div></div>
 
-<div id="importModal" class="modal-overlay"><div class="modal"><h3>📥 Importar Historias Clínicas</h3><p style="font-size:12px;color:#5A7A82;margin-bottom:16px" id="importModalMsg">Importar historias clínicas desde los PDFs de Google Drive. Este proceso puede tardar varios minutos.</p><button id="importBtn5" class="btn-add" onclick="importarHistoriasDesdeDrive(true)" style="background:#75D0E1">Probar con 5 PDFs</button><button id="importBtnAll" class="btn-add" onclick="importarHistoriasDesdeDrive(false)" style="background:#4A8FA5;margin-top:8px">Importar Todos (1000+)</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeImportModal()">Cancelar</button></div></div>
+<div id="importModal" class="modal-overlay" style="display:none"><div class="modal" style="width:90%;max-width:600px;max-height:90vh;overflow-y:auto"><h3>Importar Historia Clínica</h3><div id="importStep1" style="display:block"><p style="font-size:12px;color:#5A7A82;margin-bottom:16px">Selecciona un PDF desde Google Drive para importar los datos de una historia clínica.</p><button class="btn-add" onclick="listarPDFsDrive()" style="width:100%;background:#75D0E1">Buscar PDF en Drive</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeImportModal()">Cancelar</button></div><div id="importStep2" style="display:none"><p style="font-size:12px;color:#5A7A82;margin-bottom:12px">Selecciona un archivo:</p><div id="listaArchivos" style="max-height:300px;overflow-y:auto;margin-bottom:16px"></div><button class="btn-secondary" style="width:100%" onclick="importStep1()">← Atrás</button></div><div id="importStep3" style="display:none"><p style="font-size:12px;color:#5A7A82;margin-bottom:12px">Revisa los datos extraídos:</p><div id="previewDatos" style="background:#F5FBFC;padding:12px;border-radius:8px;margin-bottom:16px;max-height:300px;overflow-y:auto;font-size:12px"></div><button class="btn-add" onclick="confirmarImportacion()" style="width:100%;background:#75D0E1">Guardar Historia</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="importStep1()">← Cancelar</button></div></div></div>
 
 <div id="galeriaRxModal" class="modal-overlay" style="background:rgba(0,0,0,0.9);display:none;z-index:10002"><div style="position:relative;width:90%;height:90%;display:flex;flex-direction:column;align-items:center;justify-content:center"><button onclick="cerrarGaleriaRx()" style="position:absolute;top:20px;right:30px;background:none;border:none;color:#FFFFFF;font-size:32px;cursor:pointer;z-index:10003">✕</button><img id="galeriaRxImg" src="" style="max-width:90%;max-height:80%;object-fit:contain;border-radius:8px"><div style="color:#FFFFFF;margin-top:20px;display:flex;gap:20px;align-items:center"><button id="galeriaRxAnterior" onclick="cambiarRx(-1)" style="background:#75D0E1;color:#FFFFFF;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:16px">← Anterior</button><span id="galeriaRxInfo" style="color:#FFFFFF;font-size:14px">1/1</span><button id="galeriaRxSiguiente" onclick="cambiarRx(1)" style="background:#75D0E1;color:#FFFFFF;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:16px">Siguiente →</button></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
@@ -483,9 +484,14 @@ function actualizarListaHistorias(){
     return;
   }
 
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px">';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">';
   filtrados.forEach(p=>{
-    html+=`<div class="card" style="cursor:pointer;padding:16px;transition:all 0.2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'" onclick="historiaSeleccionada='${p.id}';actualizarListaHistorias()"><strong style="font-size:14px">${p.nombre.toUpperCase()}</strong><div style="font-size:12px;color:#5A7A82;margin-top:4px">📞 ${p.telefono||'Sin teléfono'}</div><div style="font-size:11px;color:#5A7A82;margin-top:8px">Haz clic para ver historia</div></div>`;
+    const tieneHistoria=datos.historias.some(h=>h.pacienteId===p.id);
+    if(tieneHistoria){
+      html+=`<div class="card" style="cursor:pointer;padding:16px;transition:all 0.2s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'" onclick="historiaSeleccionada='${p.id}';actualizarListaHistorias()"><strong style="font-size:14px">${p.nombre.toUpperCase()}</strong><div style="font-size:12px;color:#5A7A82;margin-top:4px">📞 ${p.telefono||'Sin teléfono'}</div><div style="font-size:11px;color:#5A7A82;margin-top:8px">✓ Tiene historia | Haz clic para abrir</div></div>`;
+    }else{
+      html+=`<div class="card" style="padding:16px"><strong style="font-size:14px">${p.nombre.toUpperCase()}</strong><div style="font-size:12px;color:#5A7A82;margin-top:4px">📞 ${p.telefono||'Sin teléfono'}</div><div style="font-size:11px;color:#E74C3C;margin-top:8px;margin-bottom:12px">⚠ Sin historia clínica</div><div style="display:flex;gap:6px;flex-direction:column"><button class="btn-add" onclick="abrirImportadorParaPaciente('${p.id}','${p.nombre.replace(/'/g,"\\'")}')" style="flex:1;padding:8px;font-size:11px;background:#75D0E1">📥 Importar</button><button class="btn-secondary" onclick="crearHistoriaEnBlanco('${p.id}','${p.nombre.replace(/'/g,"\\'")}')" style="flex:1;padding:8px;font-size:11px">+ Crear</button></div></div>`;
+    }
   });
   html+='</div>';
 
@@ -748,10 +754,247 @@ function openImportModal(){
   document.getElementById('importModal').classList.add('active');
 }
 function closeImportModal(){
-  document.getElementById('importModal').classList.remove('active');
+  document.getElementById('importModal').style.display='none';
+  importStep1();
 }
 
-let galeriaRxActual={historiaId:null,indice:0,total:0};
+let importDataTemp={};
+let importPacienteTarget=null;
+
+function openImportModal(){
+  document.getElementById('importModal').style.display='flex';
+  importStep1();
+}
+
+function crearHistoriaEnBlanco(pacienteId,nombrePaciente){
+  let historia=datos.historias.find(h=>h.pacienteId===pacienteId);
+  if(!historia){
+    historia={id:uid(),pacienteId,direccion:'',alergicoA:'',enfermedadCronica:'',diagnosticos:[],observaciones:'',tratamientos:[],odontograma:{},radiografias:[],proximaCita:''};
+    datos.historias.push(historia);
+    guardar();
+  }
+  historiaSeleccionada=pacienteId;
+  actualizarListaHistorias();
+}
+
+function abrirImportadorParaPaciente(pacienteId,nombrePaciente){
+  importPacienteTarget={pacienteId,nombrePaciente};
+  openImportModal();
+}
+
+function importStep1(){
+  document.getElementById('importStep1').style.display='block';
+  document.getElementById('importStep2').style.display='none';
+  document.getElementById('importStep3').style.display='none';
+  importDataTemp={};
+}
+
+async function listarPDFsDrive(){
+  if(!gapi.auth.getAuthInstance().isSignedIn.get()){
+    alert('Debes autorizar acceso a Google Drive primero');
+    openGoogleModal();
+    return;
+  }
+
+  document.getElementById('importStep1').style.display='none';
+  document.getElementById('importStep2').style.display='block';
+  document.getElementById('listaArchivos').innerHTML='<p style="text-align:center;color:#5A7A82">Buscando PDFs...</p>';
+
+  try{
+    let todosArchivos=[];
+    for(const folderId of DRIVE_FOLDER_IDS){
+      const res=await gapi.client.drive.files.list({
+        q:`'${folderId}' in parents and mimeType='application/pdf' and trashed=false`,
+        spaces:'drive',
+        pageSize:100,
+        fields:'files(id,name,webViewLink)'
+      });
+      if(res.result.files){
+        todosArchivos=[...todosArchivos,...res.result.files];
+      }
+    }
+
+    if(todosArchivos.length===0){
+      document.getElementById('listaArchivos').innerHTML='<p style="color:#5A7A82">No se encontraron PDFs en Drive</p>';
+      return;
+    }
+
+    let html='';
+    todosArchivos.forEach(f=>{
+      html+=`<div style="padding:8px;background:#FFFFFF;border:1px solid #D8ECF0;border-radius:6px;margin-bottom:8px;cursor:pointer" onclick="descargarYParsearPDF('${f.id}','${f.name.replace(/'/g,"\\'")}')"><strong style="color:#2C3E50;font-size:12px">${f.name}</strong><div style="font-size:10px;color:#5A7A82">ID: ${f.id}</div></div>`;
+    });
+    document.getElementById('listaArchivos').innerHTML=html;
+  }catch(err){
+    console.error('Error listando PDFs:',err);
+    document.getElementById('listaArchivos').innerHTML='<p style="color:#E74C3C">Error: '+err.message+'</p>';
+  }
+}
+
+async function descargarYParsearPDF(fileId,fileName){
+  document.getElementById('listaArchivos').innerHTML='<p style="text-align:center;color:#5A7A82">Descargando y analizando PDF...</p>';
+
+  try{
+    const token=gapi.auth.getAuthInstance().currentUser.get().getAuthResponse().id_token;
+    const url=`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+
+    const response=await fetch(url,{
+      headers:{'Authorization':`Bearer ${token}`}
+    });
+
+    if(!response.ok){
+      throw new Error('Error descargando archivo: '+response.statusText);
+    }
+
+    const arrayBuffer=await response.arrayBuffer();
+
+    const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+    let textoCompleto='';
+
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const textContent=await page.getTextContent();
+      textoCompleto+=textContent.items.map(item=>item.str).join(' ')+'\n';
+    }
+
+    const datosExtraidos=extraerDatosDelPDF(textoCompleto,fileName);
+    importDataTemp={fileId,fileName,textoCompleto,datos:datosExtraidos};
+
+    document.getElementById('importStep2').style.display='none';
+    document.getElementById('importStep3').style.display='block';
+    mostrarPreviewDatos(datosExtraidos);
+  }catch(err){
+    console.error('Error procesando PDF:',err);
+    alert('Error al descargar o procesar el PDF: '+err.message);
+    importStep1();
+  }
+}
+
+function extraerDatosDelPDF(texto,nombreArchivo){
+  const datos={nombre:'',edad:'',telefono:'',direccion:'',alergicoA:'',enfermedadCronica:''};
+
+  // Extraer nombre (puede ser del nombre del archivo o del PDF)
+  const matchNombre=nombreArchivo.match(/^([^.]+)/);
+  if(matchNombre){
+    datos.nombre=matchNombre[1].trim().replace(/ \./g,'');
+  }
+
+  // Extraer del texto del PDF
+  const regexEdad=/Edad:\s*(\d+)/i;
+  const matchEdad=texto.match(regexEdad);
+  if(matchEdad)datos.edad=parseInt(matchEdad[1]);
+
+  const regexTel=/Teléfono:\s*([\d\s\-\+]+)/i;
+  const matchTel=texto.match(regexTel);
+  if(matchTel)datos.telefono=matchTel[1].trim();
+
+  const regexDir=/Dirección:\s*([^\n]+)/i;
+  const matchDir=texto.match(regexDir);
+  if(matchDir)datos.direccion=matchDir[1].trim();
+
+  const regexAlergia=/Alérgico\s*a:\s*([^\n]+)/i;
+  const matchAlergia=texto.match(regexAlergia);
+  if(matchAlergia){
+    const alergia=matchAlergia[1].trim();
+    datos.alergicoA=alergia.toLowerCase().includes('no')?'':alergia;
+  }
+
+  const regexEnfermedad=/Enfermedad\s*o\s*padecimiento\s*crónico:\s*([^\n]+)/i;
+  const matchEnfermedad=texto.match(regexEnfermedad);
+  if(matchEnfermedad){
+    const enfermedad=matchEnfermedad[1].trim();
+    datos.enfermedadCronica=enfermedad.toLowerCase().includes('no')?'':enfermedad;
+  }
+
+  return datos;
+}
+
+function mostrarPreviewDatos(datos){
+  let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div>
+      <label style="font-weight:600;font-size:11px;color:#2C3E50">Nombre *</label>
+      <input type="text" id="previewNombre" value="${datos.nombre||''}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px;font-size:11px;box-sizing:border-box">
+    </div>
+    <div>
+      <label style="font-weight:600;font-size:11px;color:#2C3E50">Edad</label>
+      <input type="number" id="previewEdad" value="${datos.edad||''}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px;font-size:11px;box-sizing:border-box">
+    </div>
+    <div style="grid-column:1/-1">
+      <label style="font-weight:600;font-size:11px;color:#2C3E50">Teléfono</label>
+      <input type="text" id="previewTelefono" value="${datos.telefono||''}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px;font-size:11px;box-sizing:border-box">
+    </div>
+    <div style="grid-column:1/-1">
+      <label style="font-weight:600;font-size:11px;color:#2C3E50">Dirección</label>
+      <input type="text" id="previewDireccion" value="${datos.direccion||''}" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px;font-size:11px;box-sizing:border-box">
+    </div>
+    <div style="grid-column:1/-1">
+      <label style="font-weight:600;font-size:11px;color:#2C3E50">Alérgico a</label>
+      <input type="text" id="previewAlergia" value="${datos.alergicoA||''}" placeholder="Ej: Penicilina" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px;font-size:11px;box-sizing:border-box">
+    </div>
+    <div style="grid-column:1/-1">
+      <label style="font-weight:600;font-size:11px;color:#2C3E50">Enfermedad o padecimiento</label>
+      <input type="text" id="previewEnfermedad" value="${datos.enfermedadCronica||''}" placeholder="Ej: Diabetes" style="width:100%;padding:6px;border:1px solid #D8ECF0;border-radius:4px;font-size:11px;box-sizing:border-box">
+    </div>
+  </div>`;
+  document.getElementById('previewDatos').innerHTML=html;
+}
+
+function confirmarImportacion(){
+  // Obtener valores editados del preview
+  const nombre=(document.getElementById('previewNombre').value||'').trim();
+  const edad=parseInt(document.getElementById('previewEdad').value)||0;
+  const telefono=(document.getElementById('previewTelefono').value||'').trim();
+  const direccion=(document.getElementById('previewDireccion').value||'').trim();
+  const alergicoA=(document.getElementById('previewAlergia').value||'').trim();
+  const enfermedadCronica=(document.getElementById('previewEnfermedad').value||'').trim();
+
+  if(!nombre){
+    alert('El nombre del paciente es obligatorio');
+    document.getElementById('previewNombre').focus();
+    return;
+  }
+
+  let paciente;
+
+  // Si se abrió desde búsqueda de un paciente específico, usar ese
+  if(importPacienteTarget&&importPacienteTarget.pacienteId){
+    paciente=datos.pacientes.find(p=>p.id===importPacienteTarget.pacienteId);
+    if(paciente){
+      if(edad)paciente.edad=edad;
+      if(telefono)paciente.telefono=telefono;
+    }
+  }else{
+    // Si no, buscar paciente existente o crear uno
+    paciente=datos.pacientes.find(p=>p.nombre.toLowerCase().trim()===nombre.toLowerCase());
+    if(!paciente){
+      paciente={id:uid(),nombre,edad,telefono,fechaCreacion:hoy()};
+      datos.pacientes.push(paciente);
+    }else{
+      if(edad)paciente.edad=edad;
+      if(telefono)paciente.telefono=telefono;
+    }
+  }
+
+  // Crear/actualizar historia
+  let historia=datos.historias.find(h=>h.pacienteId===paciente.id);
+  if(!historia){
+    historia={id:uid(),pacienteId:paciente.id,direccion:'',alergicoA:'',enfermedadCronica:'',diagnosticos:[],observaciones:'',tratamientos:[],odontograma:{},radiografias:[],proximaCita:''};
+    datos.historias.push(historia);
+  }
+
+  // Actualizar datos de la historia
+  historia.direccion=direccion||historia.direccion;
+  historia.alergicoA=alergicoA||historia.alergicoA;
+  historia.enfermedadCronica=enfermedadCronica||historia.enfermedadCronica;
+
+  guardar();
+  alert('Historia importada exitosamente para '+paciente.nombre);
+  importPacienteTarget=null;
+  closeImportModal();
+  actualizarTabs();
+  actualizarListaHistorias();
+}
+
+let galeriaRxActual={historiaIdx:null,indice:0,total:0};
 
 function abrirGaleriaRx(historiaIdx,indice=0){
   if(!datos.historias[historiaIdx]||!datos.historias[historiaIdx].radiografias||datos.historias[historiaIdx].radiografias.length===0){
