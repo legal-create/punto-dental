@@ -203,7 +203,7 @@ function actualizarPacientes(){
     html+=`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
       <div>
         <div style="font-weight:700">${p.nombre}</div>
-        <div style="font-size:11px;color:#5A7A82">📞 ${p.telefono||'—'} | 👤 ${p.edad||'—'} años</div>
+        <div style="font-size:11px;color:#5A7A82">${p.telefono||'Sin teléfono'} | ${p.edad||'—'} años</div>
       </div>
       <div style="display:flex;gap:4px">
         <button class="btn-secondary" style="padding:6px 8px;font-size:10px" onclick="editarPaciente(${i})">Editar</button>
@@ -229,13 +229,25 @@ function editarPaciente(i){
   const p=datos.pacientes[i];
   let html=`<h2>Editar: ${p.nombre}</h2>
     <div class="form-grid">
-      <div><label>Nombre</label><input type="text" value="${p.nombre}" onchange="datos.pacientes[${i}].nombre=this.value;guardarDatos()"></div>
-      <div><label>Teléfono</label><input type="text" value="${p.telefono||''}" onchange="datos.pacientes[${i}].telefono=this.value;guardarDatos()"></div>
-      <div><label>Edad</label><input type="number" value="${p.edad||''}" onchange="datos.pacientes[${i}].edad=this.value;guardarDatos()"></div>
-      <div><label>Alergias</label><input type="text" value="${p.alergias||''}" onchange="datos.pacientes[${i}].alergias=this.value;guardarDatos()"></div>
+      <div><label>Nombre</label><input type="text" id="inp_nombre" value="${p.nombre}"></div>
+      <div><label>Teléfono</label><input type="text" id="inp_telefono" value="${p.telefono||''}"></div>
+      <div><label>Edad</label><input type="number" id="inp_edad" value="${p.edad||''}"></div>
+      <div><label>Alergias</label><input type="text" id="inp_alergias" value="${p.alergias||''}"></div>
     </div>
-    <button class="btn-secondary" onclick="pacientes()" style="width:100%;margin-top:8px">← Volver</button>`;
+    <div style="display:flex;gap:8px">
+      <button class="btn-add" style="margin:0;flex:1" onclick="guardarEdicionPaciente(${i})">Guardar</button>
+      <button class="btn-secondary" style="margin:0;flex:1" onclick="pacientes()">Cancelar</button>
+    </div>`;
   document.getElementById('content').innerHTML=html;
+}
+
+function guardarEdicionPaciente(i){
+  datos.pacientes[i].nombre=document.getElementById('inp_nombre').value;
+  datos.pacientes[i].telefono=document.getElementById('inp_telefono').value;
+  datos.pacientes[i].edad=document.getElementById('inp_edad').value;
+  datos.pacientes[i].alergias=document.getElementById('inp_alergias').value;
+  guardarDatos();
+  pacientes();
 }
 
 function borrarPaciente(i){
@@ -275,7 +287,7 @@ function actualizarHistorias(){
 
     html+=`<div class="card">
       <div style="font-weight:700;font-size:13px">${p.nombre}</div>
-      <div style="font-size:11px;color:#5A7A82;margin-top:4px">📞 ${p.telefono||'—'}</div>
+      <div style="font-size:11px;color:#5A7A82;margin-top:4px">${p.telefono||'Sin teléfono'}</div>
       <div style="margin-top:6px">${hist?'<span class="badge badge-ok">✓ Existe</span>':'<span class="badge badge-pending">Pendiente</span>'}</div>
       ${btn}
     </div>`;
@@ -306,7 +318,8 @@ function crearHistoria(pacienteId){
 
 function mostrarHistoria(){
   const p=datos.pacientes.find(x=>x.id===historiaSeleccionada);
-  const h=datos.historias.find(x=>x.pacienteId===historiaSeleccionada);
+  const hidx=datos.historias.findIndex(x=>x.pacienteId===historiaSeleccionada);
+  const h=datos.historias[hidx];
 
   if(!p||!h){
     historiaSeleccionada=null;
@@ -317,70 +330,96 @@ function mostrarHistoria(){
   let html=`<h2>${p.nombre}</h2>
     <div class="form-grid full">
       <label>Dirección</label>
-      <input type="text" value="${h.direccion}" onchange="h.direccion=this.value;guardarDatos()">
+      <input type="text" id="h_direccion" value="${h.direccion}">
 
       <label>Alérgico a</label>
-      <input type="text" value="${h.alergicoA}" onchange="h.alergicoA=this.value;guardarDatos()">
+      <input type="text" id="h_alergicoA" value="${h.alergicoA}">
 
       <label>Enfermedad o padecimiento crónico</label>
-      <input type="text" value="${h.enfermedadCronica}" onchange="h.enfermedadCronica=this.value;guardarDatos()">
+      <input type="text" id="h_enfermedadCronica" value="${h.enfermedadCronica}">
 
       <label>Observaciones</label>
-      <textarea onchange="h.observaciones=this.value;guardarDatos()">${h.observaciones}</textarea>
+      <textarea id="h_observaciones">${h.observaciones}</textarea>
 
       <label>Próxima cita</label>
-      <input type="date" value="${h.proximaCita}" onchange="h.proximaCita=this.value;guardarDatos()">
+      <input type="date" id="h_proximaCita" value="${h.proximaCita}">
     </div>
 
     <h3 style="margin-top:16px">Diagnóstico</h3>
-    ${renderDiagnostico(h)}
+    ${renderDiagnostico(hidx)}
 
     <h3 style="margin-top:16px">Tratamientos</h3>
-    ${renderTratamientos(h)}
+    ${renderTratamientos(hidx)}
 
     <h3 style="margin-top:16px">Radiografías (RX)</h3>
-    ${renderRx(h)}
+    ${renderRx(hidx)}
 
     <h3 style="margin-top:16px">Odontograma</h3>
-    ${renderOdontograma(h)}
+    ${renderOdontograma(hidx)}
 
     <div style="margin-top:16px;display:flex;gap:8px">
-      <button class="btn-add" onclick="generarPDF('${p.nombre}')">📄 Descargar PDF</button>
+      <button class="btn-add" onclick="guardarHistoria(${hidx})">💾 Guardar</button>
+      <button class="btn-download" onclick="generarPDF('${p.nombre}')">📄 PDF</button>
       <button class="btn-secondary" onclick="historiaSeleccionada=null;historiasClinicas()">← Volver</button>
     </div>`;
 
   document.getElementById('content').innerHTML=html;
 }
 
-function renderDiagnostico(h){
-  return `<input type="text" placeholder="Diagnóstico" value="${h.diagnosticos[0]||''}" onchange="h.diagnosticos[0]=this.value;guardarDatos()" style="width:100%">`;
+function guardarHistoria(hidx){
+  datos.historias[hidx].direccion=document.getElementById('h_direccion').value;
+  datos.historias[hidx].alergicoA=document.getElementById('h_alergicoA').value;
+  datos.historias[hidx].enfermedadCronica=document.getElementById('h_enfermedadCronica').value;
+  datos.historias[hidx].observaciones=document.getElementById('h_observaciones').value;
+  datos.historias[hidx].proximaCita=document.getElementById('h_proximaCita').value;
+
+  // Guardar diagnóstico
+  const diag=document.getElementById('h_diag');
+  if(diag) datos.historias[hidx].diagnosticos[0]=diag.value;
+
+  // Guardar tratamientos
+  datos.historias[hidx].tratamientos.forEach((t,i)=>{
+    const tx=document.getElementById(`trat_tx_${i}`);
+    const costo=document.getElementById(`trat_costo_${i}`);
+    const abono=document.getElementById(`trat_abono_${i}`);
+    if(tx) t.tx=tx.value;
+    if(costo) t.costo=parseFloat(costo.value)||0;
+    if(abono) t.abono=parseFloat(abono.value)||0;
+  });
+
+  guardarDatos();
+  mostrarHistoria();
 }
 
-function renderTratamientos(h){
+function renderDiagnostico(hidx){
+  return `<input type="text" id="h_diag" placeholder="Diagnóstico" value="${datos.historias[hidx].diagnosticos[0]||''}" style="width:100%">`;
+}
+
+function renderTratamientos(hidx){
   let html='';
-  h.tratamientos.forEach((t,i)=>{
+  datos.historias[hidx].tratamientos.forEach((t,i)=>{
     html+=`<div class="form-grid" style="margin-bottom:8px">
-      <input type="text" placeholder="Tratamiento" value="${t.tx||''}" onchange="h.tratamientos[${i}].tx=this.value;guardarDatos()">
-      <input type="number" placeholder="Costo" value="${t.costo||0}" onchange="h.tratamientos[${i}].costo=this.value;guardarDatos()">
-      <input type="number" placeholder="Abono" value="${t.abono||0}" onchange="h.tratamientos[${i}].abono=this.value;guardarDatos()">
-      <button class="btn-delete" onclick="h.tratamientos.splice(${i},1);guardarDatos();mostrarHistoria()">Eliminar</button>
+      <input type="text" id="trat_tx_${i}" placeholder="Tratamiento" value="${t.tx||''}">
+      <input type="number" id="trat_costo_${i}" placeholder="Costo" value="${t.costo||0}">
+      <input type="number" id="trat_abono_${i}" placeholder="Abono" value="${t.abono||0}">
+      <button class="btn-delete" onclick="datos.historias[${hidx}].tratamientos.splice(${i},1);mostrarHistoria()">Eliminar</button>
     </div>`;
   });
-  html+=`<button class="btn-add" onclick="h.tratamientos.push({tx:'',costo:0,abono:0});guardarDatos();mostrarHistoria()">+ Agregar Tratamiento</button>`;
+  html+=`<button class="btn-add" onclick="datos.historias[${hidx}].tratamientos.push({tx:'',costo:0,abono:0});mostrarHistoria()">+ Agregar Tratamiento</button>`;
   return html;
 }
 
-function renderRx(h){
-  let html=`<input type="file" id="fileRx" accept="image/*" style="display:none" onchange="cargarRx(this)">
-    <button class="btn-add" onclick="document.getElementById('fileRx').click()">+ Agregar RX</button>
-    <div style="font-size:11px;color:#5A7A82;margin:8px 0">${h.radiografias.length}/5</div>`;
+function renderRx(hidx){
+  let html=`<input type="file" id="fileRx_${hidx}" accept="image/*" style="display:none" onchange="cargarRx(${hidx},this)">
+    <button class="btn-add" onclick="document.getElementById('fileRx_${hidx}').click()">+ Agregar RX</button>
+    <div style="font-size:11px;color:#5A7A82;margin:8px 0">${datos.historias[hidx].radiografias.length}/5</div>`;
 
-  if(h.radiografias.length>0){
+  if(datos.historias[hidx].radiografias.length>0){
     html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">`;
-    h.radiografias.forEach((r,i)=>{
+    datos.historias[hidx].radiografias.forEach((r,i)=>{
       html+=`<div style="position:relative;border:1px solid #D8ECF0;border-radius:8px;overflow:hidden;height:80px;cursor:pointer" onclick="abrirGaleria(${i})">
         <img src="${r}" style="width:100%;height:100%;object-fit:cover">
-        <button class="btn-delete" onclick="event.stopPropagation();h.radiografias.splice(${i},1);guardarDatos();mostrarHistoria()" style="position:absolute;top:2px;right:2px;padding:2px 4px">✕</button>
+        <button class="btn-delete" onclick="event.stopPropagation();datos.historias[${hidx}].radiografias.splice(${i},1);mostrarHistoria()" style="position:absolute;top:2px;right:2px;padding:2px 4px">✕</button>
       </div>`;
     });
     html+=`</div>`;
@@ -389,37 +428,35 @@ function renderRx(h){
   return html;
 }
 
-function renderOdontograma(h){
+function renderOdontograma(hidx){
   const dientes=['11','12','13','14','15','16','17','18','21','22','23','24','25','26','27','28','31','32','33','34','35','36','37','38','41','42','43','44','45','46','47','48'];
   let html='<div class="tooth-grid">';
 
   dientes.forEach(n=>{
-    const estado=h.odontograma[n]||'sano';
-    html+=`<div class="tooth ${estado}" onclick="toggleDiente('${n}')">${n}</div>`;
+    const estado=datos.historias[hidx].odontograma[n]||'sano';
+    html+=`<div class="tooth ${estado}" onclick="toggleDiente(${hidx},'${n}')">${n}</div>`;
   });
 
   html+='</div>';
   return html;
 }
 
-function toggleDiente(num){
-  const h=datos.historias.find(x=>x.pacienteId===historiaSeleccionada);
+function toggleDiente(hidx,num){
   const estados=['sano','tratado','extraido'];
-  const actual=h.odontograma[num]||'sano';
+  const actual=datos.historias[hidx].odontograma[num]||'sano';
   const idx=(estados.indexOf(actual)+1)%3;
-  h.odontograma[num]=estados[idx];
+  datos.historias[hidx].odontograma[num]=estados[idx];
   guardarDatos();
   mostrarHistoria();
 }
 
-function cargarRx(input){
-  const h=datos.historias.find(x=>x.pacienteId===historiaSeleccionada);
-  if(h.radiografias.length>=5){alert('Máximo 5 RX');return}
+function cargarRx(hidx,input){
+  if(datos.historias[hidx].radiografias.length>=5){alert('Máximo 5 RX');return}
   if(!input.files[0])return;
 
   const reader=new FileReader();
   reader.onload=e=>{
-    h.radiografias.push(e.target.result);
+    datos.historias[hidx].radiografias.push(e.target.result);
     guardarDatos();
     mostrarHistoria();
     input.value='';
@@ -505,11 +542,95 @@ function actualizarCitas(){
 }
 
 function finanzas(){
-  document.getElementById('content').innerHTML=`<h2>Finanzas</h2><p style="color:#5A7A82">Módulo en construcción</p>`;
+  let totalIngresos=0,totalGastos=0;
+  datos.historias.forEach(h=>{
+    h.tratamientos.forEach(t=>{
+      totalIngresos+=parseFloat(t.abono)||0;
+      totalGastos+=parseFloat(t.costo)-parseFloat(t.abono)||0;
+    });
+  });
+
+  let html=`<h2>Finanzas</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      <div class="card"><div style="font-size:12px;color:#5A7A82">Ingresos</div><div style="font-size:24px;font-weight:700;margin-top:8px;color:#1B6B47">$${totalIngresos.toFixed(2)}</div></div>
+      <div class="card"><div style="font-size:12px;color:#5A7A82">Por cobrar</div><div style="font-size:24px;font-weight:700;margin-top:8px;color:#8A4A0A">$${totalGastos.toFixed(2)}</div></div>
+      <div class="card"><div style="font-size:12px;color:#5A7A82">Total tratamientos</div><div style="font-size:24px;font-weight:700;margin-top:8px">${datos.historias.reduce((s,h)=>s+h.tratamientos.length,0)}</div></div>
+    </div>
+
+    <h3>Desglose por paciente</h3>
+    <div style="margin-top:12px">`;
+
+  datos.pacientes.forEach(p=>{
+    const hist=datos.historias.find(h=>h.pacienteId===p.id);
+    if(hist&&hist.tratamientos.length>0){
+      let subtotal=0;
+      let cobrado=0;
+      hist.tratamientos.forEach(t=>{
+        subtotal+=parseFloat(t.costo)||0;
+        cobrado+=parseFloat(t.abono)||0;
+      });
+      html+=`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:700">${p.nombre}</div>
+          <div style="font-size:11px;color:#5A7A82">${hist.tratamientos.length} tratamientos</div>
+        </div>
+        <div style="text-align:right;font-size:11px">
+          <div>Total: $${subtotal.toFixed(2)}</div>
+          <div style="color:#1B6B47;font-weight:700">Cobrado: $${cobrado.toFixed(2)}</div>
+          <div style="color:#8A4A0A;font-weight:600">Por cobrar: $${(subtotal-cobrado).toFixed(2)}</div>
+        </div>
+      </div>`;
+    }
+  });
+
+  html+=`</div>`;
+  document.getElementById('content').innerHTML=html;
 }
 
 function recetario(){
-  document.getElementById('content').innerHTML=`<h2>Recetario</h2><p style="color:#5A7A82">Módulo en construcción</p>`;
+  let html=`<h2>Recetario</h2>
+    <button class="btn-add" onclick="agregarReceta()">+ Nueva Receta</button>
+    <div id="listaRecetas" style="margin-top:12px"></div>`;
+  document.getElementById('content').innerHTML=html;
+  actualizarRecetas();
+}
+
+function actualizarRecetas(){
+  if(!datos.recetas) datos.recetas=[];
+  let html='<div>';
+
+  if(datos.recetas.length===0){
+    html+='<div class="card" style="text-align:center;color:#5A7A82;padding:20px">Sin recetas guardadas</div>';
+  }else{
+    datos.recetas.forEach((r,i)=>{
+      html+=`<div class="card">
+        <div style="font-weight:700">${r.paciente} - ${r.fecha}</div>
+        <div style="font-size:11px;color:#5A7A82;margin:4px 0">${r.medicamentos.length} medicamentos</div>
+        <div style="margin:8px 0;color:#1A1A1A;font-size:12px;line-height:1.4">${r.medicamentos.join(', ')}</div>
+        <button class="btn-delete" style="width:100%" onclick="datos.recetas.splice(${i},1);guardarDatos();actualizarRecetas()">Eliminar</button>
+      </div>`;
+    });
+  }
+
+  html+='</div>';
+  document.getElementById('listaRecetas').innerHTML=html;
+}
+
+function agregarReceta(){
+  const paciente=prompt('Nombre del paciente:');
+  if(!paciente)return;
+  const medicamentos=prompt('Medicamentos (separados por coma):');
+  if(!medicamentos)return;
+
+  if(!datos.recetas) datos.recetas=[];
+  datos.recetas.push({
+    id:uid(),
+    paciente,
+    fecha:hoy(),
+    medicamentos:medicamentos.split(',').map(m=>m.trim())
+  });
+  guardarDatos();
+  actualizarRecetas();
 }
 
 function uid(){return 'id_'+Math.random().toString(36).substr(2,9)}
